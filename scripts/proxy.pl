@@ -23,18 +23,22 @@ while (my $connection = $daemon->accept) {
 
     my $uri = $request->uri;
     $uri->host_port($elastic_search_server);
+    $uri->scheme('http');
 
     my $es_request = HTTP::Request->new($request->method, $uri, $request->headers);
     $es_request->content(sub {return $connection->read_buffer});
 
+    my $sent_header = 0;
     my $es_response = $elastic_search->request($es_request, sub {
             my ($data, $response, $protcol) = @_;
-            print $data;
+            if (!$sent_header) {
+                $connection->send_status_line($response->status_line);
+                $connection->send_header(%{$response->headers});
+                $connection->send_crlf;
+                $sent_header = 1;
+            }
             $connection->send($data);
       });
-    $connection->send_status_line($es_response->status_line);
-    $connection->send_header(%{$es_response->headers});
-    $es_response->content;
 
   }
   $connection->close();
