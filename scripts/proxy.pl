@@ -33,8 +33,7 @@ while (my $connection = $daemon->accept) {
         if ($request_bytes_read >= $request_content_length) {
             return '';
         }
-        if (my $read_buffer = $connection->read_buffer) {
-            $connection->read_buffer('');
+        if (my $read_buffer = $connection->read_buffer('')) {
             $request_bytes_read += length($read_buffer);
             return $read_buffer;
         }
