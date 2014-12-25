@@ -26,16 +26,18 @@ while (my $connection = $daemon->accept) {
     $uri->scheme('http');
 
     my $es_request = HTTP::Request->new($request->method, $uri, $request->headers);
-    $es_request->content(sub {return $connection->read_buffer});
+    if ($request->headers->{'Content-Length'}) {
+        $es_request->content(sub {return $connection->read_buffer});
+    }
 
-    my $sent_header = 0;
+    my $is_header_sent = 0;
     my $es_response = $elastic_search->request($es_request, sub {
             my ($data, $response, $protcol) = @_;
-            if (!$sent_header) {
+            if (!$is_header_sent) {
                 $connection->send_status_line($response->status_line);
-                $connection->send_header(%{$response->headers});
+                $connection->send_header('Content-Type', $response->header('content-type'), 'Content-Length', $response->header('content-length'));
                 $connection->send_crlf;
-                $sent_header = 1;
+                $is_header_sent = 1;
             }
             $connection->send($data);
       });
