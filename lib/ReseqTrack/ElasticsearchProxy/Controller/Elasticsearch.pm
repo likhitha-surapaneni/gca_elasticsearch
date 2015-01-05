@@ -1,4 +1,4 @@
-package ReseqTrack::ElasticsearchProxy::Controller;
+package ReseqTrack::ElasticsearchProxy::Controllers::Elasticsearch;
 use Mojo::Base 'Mojolicious::Controller';
 
 sub es_query {
