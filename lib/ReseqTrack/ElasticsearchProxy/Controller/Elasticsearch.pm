@@ -33,7 +33,7 @@ sub es_query {
 
     $es_tx->on(finish => sub {
         my ($es_tx) = @_;
-        $es_user_agent->ioloop->stop;
+        #$es_user_agent->ioloop->stop;
         $self->finish;
     });
 
@@ -43,7 +43,7 @@ sub es_query {
 
 sub method_not_allowed {
     my ($self) = @_;
-    $self->res->headers->allow('GET', 'HEAD');
+    $self->res->headers->allow('GET', 'HEAD', 'OPTIONS');
     $self->render(text => '', status => 405);
 }
 
