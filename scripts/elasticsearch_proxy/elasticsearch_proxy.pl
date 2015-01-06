@@ -5,4 +5,4 @@ use warnings;
 use lib 'lib';
 
 require Mojolicious::Commands;
-Mojolicious::Commands->start_app('ReseqTrack::ElasticsearchProxy::ElasticsearchProxy');
+Mojolicious::Commands->start_app('ReseqTrack::ElasticsearchProxy');
