@@ -14,7 +14,7 @@ my %Elasticsearch_constructor_defaults {
 
 sub get_client {
   my %args = @_;
-  return Search::Elasticsearch(%Elasticsearch_constructor_defaults, %args);
+  return Search::Elasticsearch->new(%Elasticsearch_constructor_defaults, %args);
 }
 
 1;
