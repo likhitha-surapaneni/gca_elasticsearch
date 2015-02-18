@@ -15,15 +15,15 @@ sub es_query {
         return;
     }
 
-    my $path_query = $self->req->url->path_query;
+    my $url_query = $self->req->url->query;
+    my $url_path = $self->req->url->path;
+    $url_path =~ s/\.$format$//;
     my $http_method = $self->req->method;
 
     my $es_user_agent = Mojo::UserAgent->new();
     $es_user_agent->ioloop(Mojo::IOLoop->new);
-    my ($doc_index, $doc_type, $doc_id) = map {$self->stash($_)} qw(doc_index doc_type doc_id);
-    my $es_tx = $es_user_agent->build_tx($http_method => 'localhost:9200/'.$doc_index.'/'.$doc_type.'/'.$doc_id);
+    my $es_tx = $es_user_agent->build_tx($http_method => 'localhost:9200'.$url_path.'?'.$url_query);
     $es_tx->req->headers($self->req->headers);
-    $es_tx->req->body($self->req->body);
     $es_tx->res->max_message_size(0);
 
     $es_user_agent->on(error => sub {
@@ -35,6 +35,7 @@ sub es_query {
     $es_tx->res->content->unsubscribe('read');
 
     if ($format eq 'json') {
+        $es_tx->req->body($self->req->body);
         $es_tx->res->content->on(read => sub {
             my ($content, $bytes) = @_;
             if (!$have_sent_headers) {
@@ -56,14 +57,25 @@ sub es_query {
         my $json_buffer = '';
         my $json_buffer_handle;
         my $jsonw;
-        my $lines_to_write;
+        my $lines_to_write = '';
         my $length_written;
         my $separator = $format eq 'csv' ? ','
                         : $format eq 'tsv' ? "\t"
                         : undef;
+        my $newline = "\n";
+
+        my $req_body = JSON::decode_json($self->req->body);
+        my $fields = $req_body->{fields};
+        my $column_names = $req_body->{column_names} // $fields;
+        delete $req_body->{column_names};
+        $es_tx->req->body(JSON::encode_json($req_body));
+
         my $jsonr = JSON::Streaming::Reader->event_based(
             start_object => sub {
-                if (scalar @json_properties == 2 && $json_properties[1] eq 'hits') {
+                if (scalar @json_properties == 0) {
+                    $lines_to_write = join($separator, @$column_names).$newline;
+                }
+                elsif (scalar @json_properties == 3 && $json_properties[2] eq 'fields') {
                     $parsing_hit = 1;
                     $json_buffer = '';
                     $json_buffer_handle = IO::Scalar->new(\$json_buffer);
@@ -77,22 +89,15 @@ sub es_query {
                 if ($parsing_hit) {
                     $jsonw->end_object;
                 }
-                if (scalar @json_properties == 2) {
-                    $parsing_hit = 0;
-                    $json_buffer_handle->close();
-                    my $decoded_json = JSON::decode_json($json_buffer);
-                    my $cols = process_json($decoded_json);
-                    $lines_to_write .= join($separator, @$cols)."\n";
-                }
             },
             start_array => sub {
                 if ($parsing_hit) {
-                    $jsonw->start_object;
+                    $jsonw->start_array;
                 }
             },
             end_array => sub {
                 if ($parsing_hit) {
-                    $jsonw->end_object;
+                    $jsonw->end_array;
                 }
             },
             start_property => sub {
@@ -105,7 +110,24 @@ sub es_query {
             end_property => sub {
                 pop(@json_properties);
                 if ($parsing_hit) {
-                    $jsonw->end_property;
+                    if (scalar @json_properties == 2) {
+                        $parsing_hit = 0;
+                        $json_buffer_handle->close();
+                        my $decoded_json = JSON::decode_json($json_buffer);
+                        my @field_values;
+                        foreach my $field (@$fields) {
+                            if (my $field_array = $decoded_json->{$field}) {
+                                push(@field_values, $field_array->[0]);
+                            }
+                            else {
+                                push(@field_values, '');
+                            }
+                        }
+                        $lines_to_write .= join($separator, @field_values).$newline;
+                    }
+                    else {
+                        $jsonw->end_property;
+                    }
                 }
             },
             add_string => sub {
@@ -132,7 +154,9 @@ sub es_query {
                 }
             },
             eof => sub {
-                $json_buffer_handle->close();
+                if ($parsing_hit) {
+                    $json_buffer_handle->close();
+                }
             },
         );
 
@@ -178,12 +202,6 @@ sub method_not_allowed {
     my ($self) = @_;
     $self->res->headers->allow('GET', 'HEAD', 'OPTIONS');
     $self->render(text => '', status => 405);
-}
-
-sub process_json {
-    my ($json) = @_;
-    my @cols = @{$json->{_source}}{'Name', 'BioSamples Accession'};
-    return \@cols;
 }
 
 1;
