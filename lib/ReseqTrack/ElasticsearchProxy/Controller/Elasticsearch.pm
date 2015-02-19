@@ -16,14 +16,17 @@ sub es_query {
         return;
     }
 
-    my $url_query = $self->req->url->query;
-    my $url_path = $self->req->url->path;
-    $url_path =~ s/\.$format$//;
     my $http_method = $self->req->method;
-
     my $es_user_agent = Mojo::UserAgent->new();
     $es_user_agent->ioloop(Mojo::IOLoop->new);
-    my $es_tx = $es_user_agent->build_tx($http_method => 'localhost:9200'.$url_path.'?'.$url_query);
+    my $es_url = $self->req->url->clone;
+    my $url_path = $es_url->path;
+    $url_path =~ s/\.$format$//;
+    $es_url->path($url_path);
+    $es_url->scheme('http');
+    $es_url->host($self->app->config('elasticsearch_host'));
+    $es_url->port($self->app->config('elasticsearch_port'));
+    my $es_tx = $es_user_agent->build_tx($http_method => $es_url->to_string);
     $es_tx->req->headers($self->req->headers);
     $es_tx->res->max_message_size(0);
     $self->stash({es_tx => $es_tx, es_user_agent=> $es_user_agent});
@@ -207,7 +210,7 @@ sub es_query {
                 });
             delete $req_body->{column_names};
             $self->stash('es_tx')->req->body(JSON::encode_json($req_body));
-            $self->stash('es_user_agent')->start($es_tx);
+            $self->stash('es_user_agent')->start($self->stash('es_tx'));
         }
 
         if ($self->req->is_finished) {
