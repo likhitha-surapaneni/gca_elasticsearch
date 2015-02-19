@@ -4,8 +4,11 @@ use Mojo::Base 'Mojolicious';
 sub startup {
     my ($self) = @_;
 
-
+    $self->helper(cache => sub {state $cache = {} });
     $self->plugin('Config', file => $self->home->rel_file('config/elasticsearchproxy.conf'));
+    $self->plugin('ReseqTrack::ElasticsearchProxy::Plugin::Helpers');
+
+    $self->defaults(format => $self->config('default_format'));
 
     $self->routes->get('/:path1/:path2/:path3/:path4')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '', path3 => '', path4 => '');
     $self->routes->options('/:path1/:path2/:path3/:path4')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '', path3 => '', path4 => '');
