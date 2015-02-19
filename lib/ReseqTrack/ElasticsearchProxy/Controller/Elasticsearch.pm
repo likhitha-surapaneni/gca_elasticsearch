@@ -8,7 +8,8 @@ use JSON;
 sub es_query {
     my ($self) = @_;
 
-    my $format = $self->stash('format') || 'json';
+    my $format = $self->stash('format') || $self->app->config('default_format');
+
     $self->app->log->debug("format is $format");
     if (! grep {$format eq $_} qw(json csv tsv)) {
         $self->render(text => '', status => 406);
@@ -25,31 +26,39 @@ sub es_query {
     my $es_tx = $es_user_agent->build_tx($http_method => 'localhost:9200'.$url_path.'?'.$url_query);
     $es_tx->req->headers($self->req->headers);
     $es_tx->res->max_message_size(0);
+    $self->stash({es_tx => $es_tx, es_user_agent=> $es_user_agent});
 
     $es_user_agent->on(error => sub {
         my ($es_user_agent, $error_string) = @_;
         $self->finish;
     });
 
-    my $have_sent_headers = 0;
     $es_tx->res->content->unsubscribe('read');
 
     if ($format eq 'json') {
-        $es_tx->req->body($self->req->body);
+        $es_tx->res->content->on(body => sub {
+            $self->res->headers->from_hash($es_tx->res->headers->to_hash);
+            $self->res->code($es_tx->res->code);
+        });
         $es_tx->res->content->on(read => sub {
             my ($content, $bytes) = @_;
-            if (!$have_sent_headers) {
-                $self->res->headers->from_hash($es_tx->res->headers->to_hash);
-                $have_sent_headers = 1;
-            }
             $self->write($bytes => sub {$es_user_agent->ioloop->start});
             $es_user_agent->ioloop->stop;
         });
         $es_tx->on(finish => sub {
             my ($es_tx) = @_;
-            #$es_user_agent->ioloop->stop;
             $self->finish;
         });
+        if ($self->req->is_finished) {
+                $es_tx->req->body($self->req->body);
+                $es_user_agent->start($es_tx);
+        }
+        else {
+            $self->req->on(finish => sub {
+                $es_tx->req->body($self->req->body);
+                $es_user_agent->start($es_tx);
+            });
+        }
     }
     elsif ($format eq 'csv' || $format eq 'tsv') {
         my @json_properties;
@@ -64,16 +73,10 @@ sub es_query {
                         : undef;
         my $newline = "\n";
 
-        my $req_body = JSON::decode_json($self->req->body);
-        my $fields = $req_body->{fields};
-        my $column_names = $req_body->{column_names} // $fields;
-        delete $req_body->{column_names};
-        $es_tx->req->body(JSON::encode_json($req_body));
-
         my $jsonr = JSON::Streaming::Reader->event_based(
             start_object => sub {
                 if (scalar @json_properties == 0) {
-                    $lines_to_write = join($separator, @$column_names).$newline;
+                    $lines_to_write = join($separator, @{$self->stash('column_names')}).$newline;
                 }
                 elsif (scalar @json_properties == 3 && $json_properties[2] eq 'fields') {
                     $parsing_hit = 1;
@@ -115,7 +118,7 @@ sub es_query {
                         $json_buffer_handle->close();
                         my $decoded_json = JSON::decode_json($json_buffer);
                         my @field_values;
-                        foreach my $field (@$fields) {
+                        foreach my $field (@{$self->stash('fields')}) {
                             if (my $field_array = $decoded_json->{$field}) {
                                 push(@field_values, $field_array->[0]);
                             }
@@ -160,17 +163,20 @@ sub es_query {
             },
         );
 
+        $es_tx->res->content->on(body => sub {
+            my $headers = $es_tx->res->headers->to_hash;
+            delete $headers->{'Content-Length'};
+            $self->res->headers->from_hash($headers);
+            $self->res->headers->content_type($format eq 'csv' ? 'text/csv' : 'text/tab-separated-values');
+            $self->res->code($es_tx->res->code);
+            if (! $self->res->is_status_class(200)) {
+              $es_tx->res->content->unsubscribe('read');
+            }
+        });
         $es_tx->res->content->on(read => sub {
             my ($content, $bytes) = @_;
             $jsonr->feed_buffer(\$bytes);
             return if !$lines_to_write;
-            if (!$have_sent_headers) {
-                my $headers = $es_tx->res->headers->to_hash;
-                delete $headers->{'Content-Length'};
-                $self->res->headers->from_hash($headers);
-                $self->res->headers->content_type($format eq 'csv' ? 'text/csv' : 'text/tab-separated-values');
-                $have_sent_headers = 1;
-            }
             {
                 use bytes;
                 $length_written += length($lines_to_write);
@@ -191,12 +197,39 @@ sub es_query {
             $self->res->headers->content_length($length_written);
             $self->finish;
         });
+
+        sub process_csv_request {
+            my ($self) = @_;
+            my $req_body = JSON::decode_json($self->req->body);
+            $self->stash({
+                    fields => $req_body->{fields},
+                    column_names => $req_body->{column_names} // $req_body->{fields},
+                });
+            delete $req_body->{column_names};
+            $self->stash('es_tx')->req->body(JSON::encode_json($req_body));
+            $self->stash('es_user_agent')->start($es_tx);
+        }
+
+        if ($self->req->is_finished) {
+            process_csv_request($self);
+        }
+        else {
+            $self->req->on(finish => sub {process_csv_request($self)});
+        }
+
     }
 
 
-    $es_user_agent->start($es_tx);
 
 };
+
+sub bad_request {
+    my ($self) = @_;
+    my $url_path = $self->req->url->path;
+    my $method = $self->req->method;
+    my $text = "No handler found for uri [$url_path] and method [$method]";
+    $self->render(text => $text, status => 400);
+}
 
 sub method_not_allowed {
     my ($self) = @_;

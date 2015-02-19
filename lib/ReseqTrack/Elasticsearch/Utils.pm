@@ -5,7 +5,7 @@ use warnings;
 use Search::Elasticsearch;
 
 my %Elasticsearch_constructor_defaults {
-  nodes => ['?????.ebi.ac.uk:9200'],
+  nodes => ['localhost:9200'],
   cxn_pool => 'Sniff',
   client => 'Search::Elasticsearch::Client::Direct',
   cxn => 'Search::Elasticsearch::Cxn::Hijk',
