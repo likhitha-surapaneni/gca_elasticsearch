@@ -1,10 +1,11 @@
 package ReseqTrack::ElasticsearchProxy::Controller::Elasticsearch;
 use Mojo::Base 'Mojolicious::Controller';
+use ReseqTrack::ElasticsearchProxy::Model::JSONParsers;
+use ReseqTrack::ElasticsearchProxy::Model::ESTransaction;
+use JSON;
 
 sub es_query {
     my ($self) = @_;
-
-    $self->es_proxy_helpers->build_es_transaction();
 
     $self->respond_to(
         json => sub {$self->es_query_json()},
@@ -16,86 +17,118 @@ sub es_query {
 
 sub es_query_json {
     my ($self) = @_;
-    my $es_tx = $self->stash('es_tx');
-    my $es_user_agent = $self->stash('es_user_agent');
+    my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
+        format => 'json',
+        port => $self->app->config('elasticsearch_port'),
+        host => $self->app->config('elasticsearch_host'),
+        method => $self->req->method,
+        request_url => $self->req->url,
+    );
+    $es_transaction->set_headers($self->req->headers);
+    $es_transaction->errors_callback(sub {$self->finish});
 
-    $es_tx->res->content->on(body => sub {
-        $self->res->headers->from_hash($es_tx->res->headers->to_hash);
-        $self->res->code($es_tx->res->code);
+    $es_transaction->headers_callback( sub {
+        my ($es_headers, $es_code) = @_;
+        $self->res->headers->from_hash($es_headers);
+        $self->res->code($es_code);
     });
-    $es_tx->res->content->on(read => sub {
-        my ($content, $bytes) = @_;
-        $self->write($bytes => sub {$es_user_agent->ioloop->start});
-        $es_user_agent->ioloop->stop;
+    $es_transaction->partial_content_callback( sub {
+        my ($bytes) = @_;
+        $self->write($bytes => sub {$es_transaction->resume});
+        $es_transaction->pause;
     });
-    $es_tx->on(finish => sub {
-        my ($es_tx) = @_;
-        $self->finish;
-    });
+    $es_transaction->finished_callback( sub {$self->finish});
     if ($self->req->is_finished) {
-            $es_tx->req->body($self->req->body);
-            $es_user_agent->start($es_tx);
+        $es_transaction->set_body($self->req->body);
+        $es_transaction->start;
     }
     else {
         $self->req->on(finish => sub {
-            $es_tx->req->body($self->req->body);
-            $es_user_agent->start($es_tx);
+            $es_transaction->set_body($self->req->body);
+            $es_transaction->start;
         });
     }
 }
 
 sub es_query_tab {
     my ($self, $format) = @_;
-    my $es_tx = $self->stash('es_tx');
-    my $es_user_agent = $self->stash('es_user_agent');
+    my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
+        format => $format,
+        port => $self->app->config('elasticsearch_port'),
+        host => $self->app->config('elasticsearch_host'),
+        method => $self->req->method,
+        request_url => $self->req->url,
+    );
     $self->app->log->debug("format is $format");
-    $self->es_proxy_helpers->setup_json_parsers($format);
-    my $json_parser_params = $self->cache->{'json_parser_params'};
-    my $length_written = 0;
+    my $json_parser = ReseqTrack::ElasticsearchProxy::Model::JSONParsers->new(format => $format);
 
-    $es_tx->res->content->on(body => sub {
-        my $headers = $es_tx->res->headers->to_hash;
-        delete $headers->{'Content-Length'};
-        $self->res->headers->from_hash($headers);
+    $es_transaction->headers_callback( sub {
+        my ($es_headers, $es_code) = @_;
+        if ($es_code <200 || $es_code >=300) {
+            $self->render('', $es_code);
+        }
+        delete $es_headers->{'Content-Length'};
+        $self->res->headers->from_hash($es_headers);
         $self->res->headers->content_type($format eq 'csv' ? 'text/csv' : 'text/tab-separated-values');
-        $self->res->code($es_tx->res->code);
-        if (! $self->res->is_status_class(200)) {
-          $es_tx->res->content->unsubscribe('read');
-        }
+        $self->res->code($es_code);
     });
-    $es_tx->res->content->on(read => sub {
-        my ($content, $bytes) = @_;
-        $json_parser_params->{reader}->feed_buffer(\$bytes);
-        return if !$json_parser_params->{lines_to_write};
-        {
-            use bytes;
-            $length_written += length($json_parser_params->{lines_to_write});
-        }
-        $self->write($json_parser_params->{lines_to_write} => sub {$es_user_agent->ioloop->start});
-        $json_parser_params->{lines_to_write} = '';
-        $es_user_agent->ioloop->stop;
+    $es_transaction->partial_content_callback( sub {
+        my ($bytes) = @_;
+        $json_parser->reader->feed_buffer(\$bytes);
+        return if !$json_parser->has_lines_to_write;
+        $self->write(${$json_parser->give_lines_to_write} => sub {$es_transaction->resume});
+        $es_transaction->pause;
     });
 
-    $es_tx->on(finish => sub {
-        my ($es_tx) = @_;
-        $json_parser_params->{reader}->signal_eof;
-        {
-            use bytes;
-            $length_written += length($json_parser_params->{lines_to_write});
+    $es_transaction->finished_callback( sub {
+        $json_parser->reader->signal_eof;
+        if ($json_parser->has_lines_to_write) {
+            $self->write(${$json_parser->give_lines_to_write});
         }
-        $self->write($json_parser_params->{lines_to_write});
-        $self->res->headers->content_length($length_written);
+        $self->res->headers->content_length($json_parser->bytes_produced);
         $self->finish;
     });
 
     if ($self->req->is_finished) {
-        $self->es_proxy_helpers->process_csv_request();
+        $self->process_request_for_tab($self->req, $json_parser, $es_transaction);
     }
     else {
-        $self->req->on(finish => sub {$self->es_proxy_helpers->process_csv_request()});
+        $self->req->on(finish => sub {
+            $self->process_request_for_tab($self->req, $json_parser, $es_transaction);
+        });
     }
 
+};
 
+sub process_request_for_tab {
+    my ($self, $req, $json_parser, $es_transaction) = @_;
+    my $req_body;
+    eval { $req_body = JSON::decode_json($req->body); };
+    if ($@) {
+        $self->render(text => 'error encoutered while parsing JSON', status => 400);
+        return;
+    }
+    if (! $req_body->{fields}) {
+        $self->render(text => 'request body does not give "fields"', status => 400);
+        return;
+    }
+    eval {$json_parser->fields($req_body->{fields})};
+    if ($@) {
+        $self->render(text => '"fields" format was not valid', status => 400);
+        return;
+    }
+    eval {$json_parser->column_names($req_body->{column_names} // $req_body->{fields})};
+    if ($@) {
+        $self->render(text => '"column_names" format was not valid', status => 400);
+        return;
+    }
+    if (scalar @{$json_parser->column_names} != scalar @{$json_parser->fields}) {
+        $self->render(text => '"column_names" and "fields" are incompatible', status => 400);
+        return;
+    }
+    delete $req_body->{column_names};
+    $es_transaction->set_body(JSON::encode_json($req_body));
+    $es_transaction->start;
 };
 
 sub bad_request {

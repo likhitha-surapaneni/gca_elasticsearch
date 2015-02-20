@@ -4,9 +4,7 @@ use Mojo::Base 'Mojolicious';
 sub startup {
     my ($self) = @_;
 
-    $self->helper(cache => sub {state $cache = {} });
     $self->plugin('Config', file => $self->home->rel_file('config/elasticsearchproxy.conf'));
-    $self->plugin('ReseqTrack::ElasticsearchProxy::Plugin::Helpers');
 
     $self->defaults(format => $self->config('default_format'));
 
