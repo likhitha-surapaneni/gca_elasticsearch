@@ -85,4 +85,6 @@ sub finished_callback {
     $self->transaction->on(finish => $callback);
 };
 
+__PACKAGE__->meta->make_immutable;
+
 1;
