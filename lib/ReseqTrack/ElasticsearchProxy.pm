@@ -19,6 +19,8 @@ sub startup {
     $self->routes->get('/*')->to(controller=>'elasticsearch', action=>'bad_request');
     $self->routes->options('/*')->to(controller=>'elasticsearch', action=>'bad_request');
 
+    $self->routes->post('/:path1/:path2/_search')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '');
+
     $self->routes->any('/*')->to(controller=>'elasticsearch', action=>'method_not_allowed');
 
 }
