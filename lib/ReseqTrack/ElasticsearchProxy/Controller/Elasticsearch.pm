@@ -103,11 +103,24 @@ sub es_query_tab {
 sub process_request_for_tab {
     my ($self, $req, $json_parser, $es_transaction) = @_;
     my $req_body;
-    eval { $req_body = JSON::decode_json($req->body); };
-    if ($@) {
-        $self->render(text => 'error encoutered while parsing JSON', status => 400);
-        $self->app->log->debug("$@");
-        return;
+    if ($req->headers->content_type eq 'application/x-www-form-urlencoded') {
+        my $json = $req->body_params->to_hash->{json};
+        if (!$json) {
+            $self->render(text => 'www-form did not contain json', status => 400);
+            return;
+        }
+        eval { $req_body = JSON::decode_json($json); };
+        if ($@) {
+            $self->render(text => 'error encoutered while parsing JSON', status => 400);
+            return;
+        }
+    }
+    else {
+        eval { $req_body = JSON::decode_json($req->body); };
+        if ($@) {
+            $self->render(text => 'error encoutered while parsing JSON', status => 400);
+            return;
+        }
     }
     if (! $req_body->{fields}) {
         $self->render(text => 'request body does not give "fields"', status => 400);
