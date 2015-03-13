@@ -22,6 +22,7 @@ sub BUILD {
     my $url_path = $es_url->path;
     my $format = $self->format;
     $url_path =~ s/\.$format$//;
+    $url_path =~ s{/api}{};
     $es_url->path($url_path);
     $es_url->scheme('http');
     $es_url->host($self->host);

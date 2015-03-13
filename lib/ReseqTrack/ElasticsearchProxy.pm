@@ -13,15 +13,17 @@ sub startup {
     }
 
 
-    $self->routes->get('/:path1/:path2/:path3/:path4')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '', path3 => '', path4 => '');
-    $self->routes->options('/:path1/:path2/:path3/:path4')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '', path3 => '', path4 => '');
+    $self->routes->get('/api/:path1/:path2/:path3/:path4')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '', path3 => '', path4 => '');
+    $self->routes->options('/api/:path1/:path2/:path3/:path4')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '', path3 => '', path4 => '');
 
-    $self->routes->get('/*')->to(controller=>'elasticsearch', action=>'bad_request');
-    $self->routes->options('/*')->to(controller=>'elasticsearch', action=>'bad_request');
+    $self->routes->get('/api/*')->to(controller=>'elasticsearch', action=>'bad_request');
+    $self->routes->options('/api/*')->to(controller=>'elasticsearch', action=>'bad_request');
 
-    $self->routes->post('/:path1/:path2/_search')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '');
+    $self->routes->post('/api/:path1/:path2/_search')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '');
 
-    $self->routes->any('/*')->to(controller=>'elasticsearch', action=>'method_not_allowed');
+    $self->routes->post('/*')->to(controller=>'elasticsearch', action=>'method_not_allowed');
+    $self->routes->put('/*')->to(controller=>'elasticsearch', action=>'method_not_allowed');
+    $self->routes->delete('/*')->to(controller=>'elasticsearch', action=>'method_not_allowed');
 
 }
 

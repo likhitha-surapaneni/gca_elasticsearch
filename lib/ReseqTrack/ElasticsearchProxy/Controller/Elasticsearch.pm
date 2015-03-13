@@ -106,6 +106,7 @@ sub process_request_for_tab {
     eval { $req_body = JSON::decode_json($req->body); };
     if ($@) {
         $self->render(text => 'error encoutered while parsing JSON', status => 400);
+        $self->app->log->debug("$@");
         return;
     }
     if (! $req_body->{fields}) {
