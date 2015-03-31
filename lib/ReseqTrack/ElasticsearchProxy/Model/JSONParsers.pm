@@ -40,6 +40,7 @@ sub BUILD {
     my @properties_stack;
     my $json_writer;
     my $separator = ($self->format eq 'csv' ? ',' : "\t");
+    my $sub_separator = ($self->format eq 'csv' ? ';' : ",");
     my $newline = "\n";
 
     my %jsonr_callbacks;
@@ -84,7 +85,7 @@ sub BUILD {
                     my @field_values;
                     foreach my $field (@{$self->fields}) {
                         if (my $field_array = $decoded_json->{$field}) {
-                            push(@field_values, $field_array->[0]);
+                            push(@field_values, join($sub_separator, @{$field_array}));
                         }
                         else {
                             push(@field_values, '');
