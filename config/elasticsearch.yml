@@ -1,0 +1,9 @@
+discovery.zen.ping.multicast.enabled: false
+discovery.zen.ping.unicast.hosts: ["vg-rs-dev1", "vg-rs-dev2", "vg-rs-dev3", "vg-rs-dev4"]
+#discovery.zen.minimum_master_nodes: 3
+#gateway.expected_nodes: 4
+bootstrap.mlockall: true
+cluster.name: gca_elasticsearch
+http.port: 9200
+http.cors.enabled: true
+action.disable_delete_all_indices: true
