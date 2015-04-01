@@ -16,11 +16,16 @@ sub startup {
 
     $self->routes->get('/api/:path1/:path2/:path3/:path4')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '', path3 => '', path4 => '');
     $self->routes->options('/api/:path1/:path2/:path3/:path4')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '', path3 => '', path4 => '');
+    $self->routes->get('/:path1/api/:path2/:path3/:path4')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '', path3 => '', path4 => '');
+    $self->routes->options('/:path1/api/:path2/:path3/:path4')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '', path3 => '', path4 => '');
 
     $self->routes->get('/api/*')->to(controller=>'elasticsearch', action=>'bad_request');
     $self->routes->options('/api/*')->to(controller=>'elasticsearch', action=>'bad_request');
+    $self->routes->get('/:path1/api/*')->to(controller=>'elasticsearch', action=>'bad_request');
+    $self->routes->options('/:path1/api/*')->to(controller=>'elasticsearch', action=>'bad_request');
 
     $self->routes->post('/api/:path1/:path2/_search')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '');
+    $self->routes->post('/:path1/api/:path2/_search')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '');
 
     $self->routes->get('/:name')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '');
 
