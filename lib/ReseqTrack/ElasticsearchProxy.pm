@@ -12,6 +12,8 @@ sub startup {
         $self->plugin('CORS');
     }
 
+    $self->routes->any('/_*')->to(controller=>'elasticsearch', action=>'bad_request');
+
     $self->routes->get('/:webapp')->to(controller=>'static', action=>'webapp_index');
 
     $self->routes->get('/api/:path1/:path2/:path3/:path4')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '', path3 => '', path4 => '');
