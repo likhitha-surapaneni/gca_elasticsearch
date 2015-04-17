@@ -1,46 +1,30 @@
 #! /bin/sh
 ### BEGIN INIT INFO
-# Provides:          elasticsearch
+# Provides:          elasticsearch_proxy
 # Required-Start:    $all
 # Required-Stop:    $all
 # Default-Start:    2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: Starts elasticsearch
-# Description:      Starts elasticsearch using start-stop-daemon
+# Short-Description: Starts elasticsearch_proxy
+# Description:      Starts elasticsearch_proxy using hypnotoad
 ### END INIT INFO
  
-ES_HOME=/nfs/nobackup/reseq-info/web-dev/elasticsearch/elasticsearch-1.4.4/
-ES_HEAP_SIZE=2g
-DAEMON=$ES_HOME/bin/elasticsearch
-NAME=gca_elasticsearch
-DESC=gca_elasticsearch
-PID_FILE=/nfs/nobackup/reseq-info/web-dev/server_homes/$HOSTNAME/var/run/$NAME.pid
-LOG_DIR=/nfs/nobackup/reseq-info/web-dev/server_homes/$HOSTNAME/var/log/$NAME
-DATA_DIR=/nfs/nobackup/reseq-info/web-dev/server_homes/$HOSTNAME/var/lib/$NAME
-WORK_DIR=/nfs/nobackup/reseq-info/web-dev/server_homes/$HOSTNAME/tmp/$NAME
-TEMP_DIR=/nfs/nobackup/reseq-info/web-dev/server_homes/$HOSTNAME/tmp/$NAME
-CONF_DIR=/nfs/nobackup/reseq-info/web-dev/gca_elasticsearch/config
-CLUSTER_NAME=$NAME
-NODE_NAME=$HOSTNAME
-CONFIG_FILE=$CONF_DIR/elasticsearch.yml
-DAEMON_OPTS="-d -p $PID_FILE -Des.config=$CONFIG_FILE -Des.path.conf=$CONF_DIR -Des.path.home=$ES_HOME -Des.path.logs=$LOG_DIR -Des.path.data=$DATA_DIR -Des.path.work=$WORK_DIR -Des.node.name=$NODE_NAME -Des.cluster.name=$CLUSTER_NAME -Djna.tmpdir=$TEMP_DIR"
+ES_HOME=/nfs/nobackup/reseq-info/web-dev/gca_elasticsearch
+SCRIPT=$ES_HOME/scripts/elasticsearch_proxy/elasticsearch_proxy.pl
 
-test -x $DAEMON || exit 0
+test -d $ES_HOME || exit 0
  
 set -e
  
 case "$1" in
   start)
-    echo "Starting $DESC"
-    mkdir -p $LOG_DIR $DATA_DIR $WORK_DIR
-    export ES_HEAP_SIZE
-    $DAEMON $DAEMON_OPTS
+    echo "Starting $SCRIPT"
+    cd $ES_HOME
+    carton exec hypnotoad $SCRIPT
     ;;
   stop)
-    [ -f $PID_FILE ] || exit
-    echo "Stopping $DESC"
-    kill -9 `cat $PID_FILE`
-    rm -f $PID_FILE
+    echo "Stopping $SCRIPT"
+    hypnotoad --stop $SCRIPT
     ;;
   restart|force-reload)
     ${0} stop
