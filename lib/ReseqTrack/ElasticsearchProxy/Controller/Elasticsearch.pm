@@ -15,6 +15,20 @@ sub es_query {
     );
 }
 
+sub es_test {
+    my ($self) = @_;
+
+    my $es_host = $self->app->config('elasticsearch_host');
+    my $es_port = $self->app->config('elasticsearch_port');
+    my $es_test_path = $self->app->config('elasticsearch_test_url');
+    my $url = "http:/$es_host:$es_port$es_test_path";
+
+    $self->ua->get($url => sub {
+        my ($ua, $tx) = @_;
+        $self->render(text => $tx->body, status => $tx->res->code);
+    });
+}
+
 sub es_query_json {
     my ($self) = @_;
     my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
