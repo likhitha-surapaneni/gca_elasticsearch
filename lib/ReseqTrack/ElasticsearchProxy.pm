@@ -12,6 +12,7 @@ sub startup {
         $self->plugin('CORS');
     }
 
+    $self->routes->get('/api/test')->to(controller=>'elasticsearch', action=>'es_test');
     $self->routes->get('/:webapp')->to(controller=>'static', action=>'webapp_index');
 
     $self->routes->any('/api/_*')->to(controller=>'elasticsearch', action=>'bad_request');
