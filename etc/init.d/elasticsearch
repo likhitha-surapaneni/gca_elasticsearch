@@ -9,17 +9,17 @@
 # Description:      Starts elasticsearch using start-stop-daemon
 ### END INIT INFO
  
-ES_HOME=/nfs/nobackup/reseq-info/web-dev/elasticsearch/elasticsearch-1.4.4/
+ES_HOME=/nfs/public/rw/homes/reseq_adm/elasticsearch/elasticsearch-1.5.1/
 ES_HEAP_SIZE=2g
 DAEMON=$ES_HOME/bin/elasticsearch
-NAME=gca_elasticsearch_dev
-DESC=gca_elasticsearch_dev
-PID_FILE=/nfs/nobackup/reseq-info/web-dev/server_homes/$HOSTNAME/var/run/$NAME.pid
-LOG_DIR=/nfs/nobackup/reseq-info/web-dev/server_homes/$HOSTNAME/var/log/$NAME
-DATA_DIR=/nfs/nobackup/reseq-info/web-dev/server_homes/$HOSTNAME/var/lib/$NAME
-WORK_DIR=/nfs/nobackup/reseq-info/web-dev/server_homes/$HOSTNAME/tmp/$NAME
-TEMP_DIR=/nfs/nobackup/reseq-info/web-dev/server_homes/$HOSTNAME/tmp/$NAME
-CONF_DIR=/nfs/nobackup/reseq-info/web-dev/gca_elasticsearch/config/
+NAME=gca_elasticsearch_staging
+DESC=gca_elasticsearch_staging
+PID_FILE=$HOME/$HOSTNAME/var/run/$NAME.pid
+LOG_DIR=$HOME/$HOSTNAME/var/log/$NAME
+DATA_DIR=$HOME/$HOSTNAME/var/lib/$NAME
+WORK_DIR=$HOME/$HOSTNAME/tmp/$NAME
+TEMP_DIR=$HOME/$HOSTNAME/tmp/$NAME
+CONF_DIR=/net/isilonP/public/rw/reseq-info/elastic_search/gca_elasticsearch/config/
 CLUSTER_NAME=$NAME
 NODE_NAME=$HOSTNAME
 CONFIG_FILE=$CONF_DIR/elasticsearch.yml
