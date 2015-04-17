@@ -20,12 +20,13 @@ sub es_test {
 
     my $es_host = $self->app->config('elasticsearch_host');
     my $es_port = $self->app->config('elasticsearch_port');
-    my $es_test_path = $self->app->config('elasticsearch_test_url');
-    my $url = "http:/$es_host:$es_port$es_test_path";
+    my $es_test_path = $self->app->config('elasticsearch_test_path');
+    my $url = "http://$es_host:$es_port$es_test_path";
+    $self->app->log->debug("url is $url");
 
     $self->ua->get($url => sub {
         my ($ua, $tx) = @_;
-        $self->render(text => $tx->body, status => $tx->res->code);
+        $self->render(text => $tx->res->body, status => $tx->res->code);
     });
 }
 
