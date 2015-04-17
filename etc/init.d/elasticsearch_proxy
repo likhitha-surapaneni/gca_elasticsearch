@@ -9,7 +9,7 @@
 # Description:      Starts elasticsearch_proxy using hypnotoad
 ### END INIT INFO
  
-ES_HOME=/nfs/nobackup/reseq-info/web-dev/gca_elasticsearch
+ES_HOME=/nfs/public/rw/reseq-info/elastic_search/gca_elasticsearch
 SCRIPT=$ES_HOME/scripts/elasticsearch_proxy/elasticsearch_proxy.pl
 
 test -d $ES_HOME || exit 0
