@@ -4,6 +4,17 @@ use ReseqTrack::ElasticsearchProxy::Model::JSONParsers;
 use ReseqTrack::ElasticsearchProxy::Model::ESTransaction;
 use JSON;
 
+sub webapp_es_query {
+    my ($self) = @_;
+
+    my $path1 = $self->app->config('elasticsearch_webabpp_index_map')->{$self->stash('webapp')};
+    if ($path1) {
+        $self->stash(path1 => $path1);
+        $self->es_query();
+    }
+
+}
+
 sub es_query {
     my ($self) = @_;
 
@@ -40,7 +51,7 @@ sub es_query_json {
         port => $self->app->config('elasticsearch_port'),
         host => $self->app->config('elasticsearch_host'),
         method => $self->req->method,
-        request_url => $self->req->url,
+        url_path_parts => [grep {$_} map {$self->stash($_)} qw(path1 path2 path3 path4)],
     );
     $es_transaction->set_headers($self->req->headers);
     $es_transaction->errors_callback(sub {$self->finish});
@@ -75,7 +86,7 @@ sub es_query_tab {
         port => $self->app->config('elasticsearch_port'),
         host => $self->app->config('elasticsearch_host'),
         method => $self->req->method,
-        request_url => $self->req->url,
+        url_path_parts => [grep {$_} map {$self->stash($_)} qw(path1 path2 path3 path4)],
     );
     $self->app->log->debug("format is $format");
     my $json_parser = ReseqTrack::ElasticsearchProxy::Model::JSONParsers->new(format => $format);

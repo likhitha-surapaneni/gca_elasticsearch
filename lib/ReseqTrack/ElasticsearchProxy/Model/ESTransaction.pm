@@ -10,7 +10,7 @@ has 'format' => (is => 'rw', isa => 'Str');
 has 'port' => (is => 'rw', isa => 'Int');
 has 'host' => (is => 'rw', isa => 'Str');
 has 'method' => (is => 'rw', isa => 'Str');
-has 'request_url' => (is => 'rw', isa => 'Mojo::URL');
+has 'url_path_parts' => (is => 'rw', isa => 'ArrayRef[Str]');
 has 'user_agent' => (is => 'ro', isa => 'Mojo::UserAgent',
     default => sub { return Mojo::UserAgent->new()->ioloop(Mojo::IOLoop->new); }
 );
@@ -18,17 +18,8 @@ has 'transaction' => (is => 'rw', isa => 'Mojo::Transaction');
 
 sub BUILD {
     my ($self) = @_;
-    my $es_url = $self->request_url->clone;
-    my $url_path = $es_url->path;
-    my $format = $self->format;
-    $url_path =~ s/\.$format$//;
-    $url_path =~ s{/api}{};
-    $es_url->path($url_path);
-    $es_url->scheme('http');
-    $es_url->host($self->host);
-    $es_url->port($self->port);
-
-    my $es_tx = $self->user_agent->build_tx($self->method => $es_url->to_string);
+    my $es_url = sprintf('http://%s:%s/%s', $self->host, $self->port, join('/', @{$self->url_path_parts}));
+    my $es_tx = $self->user_agent->build_tx($self->method => $es_url);
     $es_tx->res->max_message_size(0);
     $es_tx->res->content->unsubscribe('read');
     $self->transaction($es_tx);
