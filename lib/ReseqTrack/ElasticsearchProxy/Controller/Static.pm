@@ -11,6 +11,7 @@ sub webapp_index {
       $self->redirect_to("$webapp/");
     }
     else {
+      $self->res->headers->cache_control('max-age=1, no-cache');
       $self->reply->static("$webapp/index.html");
     }
 }
