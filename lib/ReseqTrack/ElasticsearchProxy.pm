@@ -6,31 +6,21 @@ sub startup {
 
     $self->plugin('Config', file => $self->home->rel_file('config/elasticsearchproxy.conf'));
 
-    $self->defaults(format => $self->config('default_format'));
+    #$self->defaults(format => $self->config('default_format'));
 
     if ($self->config('cors.enabled')) {
         $self->plugin('CORS');
     }
 
-    $self->routes->get('/api/test')->to(controller=>'elasticsearch', action=>'es_test');
-    $self->routes->get('/:webapp')->to(controller=>'static', action=>'webapp_index');
+    foreach my $allowed_plugin (@{$self->config('allowed_plugins')}) {
+        $self->routes->get('/_plugin/'.$allowed_plugin)->to(controller=>'elasticsearch', action=>'es_query');
+    }
 
-    $self->routes->any('/api/_*')->to(controller=>'elasticsearch', action=>'bad_request');
-    $self->routes->get('/api/:path1/:path2/:path3/:path4')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '', path3 => '', path4 => '');
-    $self->routes->options('/api/:path1/:path2/:path3/:path4')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '', path3 => '', path4 => '');
+    $self->routes->any('/_*')->to(controller=>'elasticsearch', action=>'bad_request');
+    $self->routes->get('/*')->to(controller=>'elasticsearch', action=>'es_query');
+    $self->routes->options('/*')->to(controller=>'elasticsearch', action=>'es_query');
 
-    $self->routes->get('/:webapp/api/:path2/:path3/:path4')->to(controller=>'elasticsearch', action=>'webapp_es_query', path2 => '', path3 => '', path4 => '');
-    $self->routes->options('/:webapp/api/:path2/:path3/:path4')->to(controller=>'elasticsearch', action=>'webapp_es_query', path2 => '', path3 => '', path4 => '');
-
-    $self->routes->get('/api/*')->to(controller=>'elasticsearch', action=>'bad_request');
-    $self->routes->options('/api/*')->to(controller=>'elasticsearch', action=>'bad_request');
-    $self->routes->get('/:path1/api/*')->to(controller=>'elasticsearch', action=>'bad_request');
-    $self->routes->options('/:path1/api/*')->to(controller=>'elasticsearch', action=>'bad_request');
-
-    $self->routes->post('/api/:path1/:path2/_search')->to(controller=>'elasticsearch', action=>'es_query', path3 => '_search');
-    $self->routes->post('/:webapp/api/:path2/_search')->to(controller=>'elasticsearch', action=>'webapp_es_query', path3 => '_search');
-
-    $self->routes->get('/:name')->to(controller=>'elasticsearch', action=>'es_query', path1 => '', path2 => '');
+    $self->routes->post('/:path1/:path2/_search')->to(controller=>'elasticsearch', action=>'es_query');
 
     $self->routes->post('/*')->to(controller=>'elasticsearch', action=>'method_not_allowed');
     $self->routes->put('/*')->to(controller=>'elasticsearch', action=>'method_not_allowed');
