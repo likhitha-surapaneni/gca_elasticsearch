@@ -6,11 +6,10 @@ use Moose;
 use Mojo::UserAgent;
 use Mojo::IOLoop;
 
-has 'format' => (is => 'rw', isa => 'Str');
 has 'port' => (is => 'rw', isa => 'Int');
 has 'host' => (is => 'rw', isa => 'Str');
 has 'method' => (is => 'rw', isa => 'Str');
-has 'url_path_parts' => (is => 'rw', isa => 'ArrayRef[Str]');
+has 'url_path' => (is => 'rw', isa => 'Str');
 has 'user_agent' => (is => 'ro', isa => 'Mojo::UserAgent',
     default => sub { return Mojo::UserAgent->new()->ioloop(Mojo::IOLoop->new); }
 );
@@ -18,7 +17,7 @@ has 'transaction' => (is => 'rw', isa => 'Mojo::Transaction');
 
 sub BUILD {
     my ($self) = @_;
-    my $es_url = sprintf('http://%s:%s/%s', $self->host, $self->port, join('/', @{$self->url_path_parts}));
+    my $es_url = sprintf('http://%s:%s/%s', $self->host, $self->port, $self->url_path);
     my $es_tx = $self->user_agent->build_tx($self->method => $es_url);
     $es_tx->res->max_message_size(0);
     $es_tx->res->content->unsubscribe('read');

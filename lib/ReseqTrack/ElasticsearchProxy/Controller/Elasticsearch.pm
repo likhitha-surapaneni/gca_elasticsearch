@@ -4,54 +4,23 @@ use ReseqTrack::ElasticsearchProxy::Model::JSONParsers;
 use ReseqTrack::ElasticsearchProxy::Model::ESTransaction;
 use JSON;
 
-sub webapp_es_query {
-    my ($self) = @_;
-
-    my $path1 = $self->app->config('elasticsearch_webabpp_index_map')->{$self->stash('webapp')};
-    if ($path1) {
-        $self->stash(path1 => $path1);
-        $self->es_query();
-    }
-
-}
-
 sub es_query {
     my ($self) = @_;
 
     $self->respond_to(
-        json => sub {$self->es_query_json()},
         csv => sub {$self->es_query_tab('csv')},
         tsv => sub {$self->es_query_tab('tsv')},
-        any => {data => '', status => 406},
+        any => sub {$self->es_query_default()},
     );
 }
 
-sub es_test {
-    my ($self) = @_;
-
-    my $es_host = $self->app->config('elasticsearch_host');
-    my $es_port = $self->app->config('elasticsearch_port');
-    my $es_test_path = $self->app->config('elasticsearch_test_path');
-    my $url = "http://$es_host:$es_port$es_test_path";
-
-    $self->ua->get($url => sub {
-        my ($ua, $tx) = @_;
-        $self->res->headers->from_hash($tx->res->headers->to_hash);
-        $self->res->code($tx->res->code);
-        $self->write($tx->res->body => sub {
-          $self->finish;
-        });
-    });
-}
-
-sub es_query_json {
+sub es_query_default {
     my ($self) = @_;
     my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
-        format => 'json',
         port => $self->app->config('elasticsearch_port'),
         host => $self->app->config('elasticsearch_host'),
         method => $self->req->method,
-        url_path_parts => [grep {$_} map {$self->stash($_)} qw(path1 path2 path3 path4)],
+        url_path_parts => $self->req->url->path,
     );
     $es_transaction->set_headers($self->req->headers);
     $es_transaction->errors_callback(sub {$self->finish});
@@ -82,11 +51,10 @@ sub es_query_json {
 sub es_query_tab {
     my ($self, $format) = @_;
     my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
-        format => $format,
         port => $self->app->config('elasticsearch_port'),
         host => $self->app->config('elasticsearch_host'),
         method => $self->req->method,
-        url_path_parts => [grep {$_} map {$self->stash($_)} qw(path1 path2 path3 path4)],
+        url_path_parts => $self->req->url->path,
     );
     $self->app->log->debug("format is $format");
     my $json_parser = ReseqTrack::ElasticsearchProxy::Model::JSONParsers->new(format => $format);
