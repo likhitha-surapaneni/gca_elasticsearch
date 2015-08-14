@@ -4,35 +4,14 @@ use ReseqTrack::ElasticsearchProxy::Model::JSONParsers;
 use ReseqTrack::ElasticsearchProxy::Model::ESTransaction;
 use JSON;
 
-sub webapp_es_query {
+sub simple {
     my ($self) = @_;
-
-    my $path1 = $self->app->config('elasticsearch_webabpp_index_map')->{$self->stash('webapp')};
-    if ($path1) {
-        $self->stash(path1 => $path1);
-        $self->es_query();
-    }
-
-}
-
-sub es_query {
-    my ($self) = @_;
-
-    $self->respond_to(
-        json => sub {$self->es_query_json()},
-        csv => sub {$self->es_query_tab('csv')},
-        tsv => sub {$self->es_query_tab('tsv')},
-        any => {data => '', status => 406},
-    );
-}
-
-sub es_test {
-    my ($self) = @_;
+    my $path = $self->req->url->path->to_abs_string;
 
     my $es_host = $self->app->config('elasticsearch_host');
     my $es_port = $self->app->config('elasticsearch_port');
     my $es_test_path = $self->app->config('elasticsearch_test_path');
-    my $url = "http://$es_host:$es_port$es_test_path";
+    my $url = "http://$es_host:$es_port$path";
 
     $self->ua->get($url => sub {
         my ($ua, $tx) = @_;
@@ -42,16 +21,26 @@ sub es_test {
           $self->finish;
         });
     });
+
 }
 
-sub es_query_json {
+sub es_query {
+    my ($self) = @_;
+
+    $self->respond_to(
+        csv => sub {$self->es_query_tab('csv')},
+        tsv => sub {$self->es_query_tab('tsv')},
+        any => sub {$self->es_query_default()},
+    );
+}
+
+sub es_query_default {
     my ($self) = @_;
     my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
-        format => 'json',
         port => $self->app->config('elasticsearch_port'),
         host => $self->app->config('elasticsearch_host'),
         method => $self->req->method,
-        url_path_parts => [grep {$_} map {$self->stash($_)} qw(path1 path2 path3 path4)],
+        url_path => $self->req->url->path->to_abs_string,
     );
     $es_transaction->set_headers($self->req->headers);
     $es_transaction->errors_callback(sub {$self->finish});
@@ -81,12 +70,13 @@ sub es_query_json {
 
 sub es_query_tab {
     my ($self, $format) = @_;
+    my $url_path = $self->req->url->path->to_abs_string;
+    $url_path =~ s{\.$format$}{};
     my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
-        format => $format,
         port => $self->app->config('elasticsearch_port'),
         host => $self->app->config('elasticsearch_host'),
         method => $self->req->method,
-        url_path_parts => [grep {$_} map {$self->stash($_)} qw(path1 path2 path3 path4)],
+        url_path => $url_path,
     );
     $self->app->log->debug("format is $format");
     my $json_parser = ReseqTrack::ElasticsearchProxy::Model::JSONParsers->new(format => $format);
@@ -176,7 +166,7 @@ sub process_request_for_tab {
 
 sub bad_request {
     my ($self) = @_;
-    my $url_path = $self->req->url->path;
+    my $url_path = $self->req->url->path->to_abs_string;
     my $method = $self->req->method;
     my $text = "No handler found for uri [$url_path] and method [$method]";
     $self->render(text => $text, status => 400);
