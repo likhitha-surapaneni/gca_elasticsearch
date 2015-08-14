@@ -12,8 +12,8 @@ sub startup {
         $self->plugin('CORS');
     }
 
-    foreach my $allowed_plugin (@{$self->config('allowed_plugins')}) {
-        $self->routes->get('/_plugin/'.$allowed_plugin)->to(controller=>'elasticsearch', action=>'es_query');
+    while (my ($from, $to) = each %{$self->config('plugin_rewrites')}) {
+        $self->routes->get($from)->to(controller=>'elasticsearch', action=>'simple', path=>$to);
     }
 
     $self->routes->any('/_*')->to(controller=>'elasticsearch', action=>'bad_request');
