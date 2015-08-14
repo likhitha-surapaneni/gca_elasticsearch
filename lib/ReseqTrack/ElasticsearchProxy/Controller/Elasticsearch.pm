@@ -6,7 +6,7 @@ use JSON;
 
 sub simple {
     my ($self) = @_;
-    my $path = $self->stash('path') || $self->req->url->path->to_abs_string;
+    my $path = $self->req->url->path->to_abs_string;
 
     my $es_host = $self->app->config('elasticsearch_host');
     my $es_port = $self->app->config('elasticsearch_port');

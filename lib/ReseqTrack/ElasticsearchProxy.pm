@@ -6,14 +6,12 @@ sub startup {
 
     $self->plugin('Config', file => $self->home->rel_file('config/elasticsearchproxy.conf'));
 
-    #$self->defaults(format => $self->config('default_format'));
-
     if ($self->config('cors.enabled')) {
         $self->plugin('CORS');
     }
 
-    while (my ($from, $to) = each %{$self->config('plugin_rewrites')}) {
-        $self->routes->get($from)->to(controller=>'elasticsearch', action=>'simple', path=>$to);
+    foreach my $path (@{$self->config('allowed_es_plugins'}) {
+        $self->routes->get($path)->to(controller=>'elasticsearch', action=>'simple');
     }
 
     $self->routes->any('/_*')->to(controller=>'elasticsearch', action=>'bad_request');
