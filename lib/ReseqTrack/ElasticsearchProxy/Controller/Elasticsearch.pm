@@ -70,11 +70,13 @@ sub es_query_default {
 
 sub es_query_tab {
     my ($self, $format) = @_;
+    my $url_path = $self->req->url->path->to_abs_string;
+    $url_path =~ s{\.$format$}{};
     my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
         port => $self->app->config('elasticsearch_port'),
         host => $self->app->config('elasticsearch_host'),
         method => $self->req->method,
-        url_path => $self->req->url->path->to_abs_string,
+        url_path => $url_path,
     );
     $self->app->log->debug("format is $format");
     my $json_parser = ReseqTrack::ElasticsearchProxy::Model::JSONParsers->new(format => $format);
