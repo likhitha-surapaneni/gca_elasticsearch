@@ -10,7 +10,7 @@ sub startup {
         $self->plugin('CORS');
     }
     if (my $static_directory = $self->config('static_directory')) {
-        $self->plugin('Directory', root => $static_directory);
+        $self->plugin('Directory', root => $static_directory, dir_index => 'index.html');
     }
 
     if ($self->config('es_rewrite_rules')) {
