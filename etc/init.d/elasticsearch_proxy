@@ -24,7 +24,7 @@ case "$1" in
     ;;
   stop)
     echo "Stopping $SCRIPT"
-    hypnotoad --stop $SCRIPT
+    carton exec hypnotoad --stop $SCRIPT
     ;;
   restart|force-reload)
     ${0} stop
