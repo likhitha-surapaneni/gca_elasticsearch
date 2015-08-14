@@ -10,7 +10,7 @@ sub startup {
         $self->plugin('CORS');
     }
 
-    foreach my $path (@{$self->config('allowed_es_plugins'}) {
+    foreach my $path (@{$self->config('allowed_es_plugins')}) {
         $self->routes->get($path)->to(controller=>'elasticsearch', action=>'simple');
     }
 
