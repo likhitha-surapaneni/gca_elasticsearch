@@ -20,7 +20,7 @@ sub es_query_default {
         port => $self->app->config('elasticsearch_port'),
         host => $self->app->config('elasticsearch_host'),
         method => $self->req->method,
-        url_path_parts => $self->req->url->path,
+        url_path => $self->req->url->path,
     );
     $es_transaction->set_headers($self->req->headers);
     $es_transaction->errors_callback(sub {$self->finish});
@@ -54,7 +54,7 @@ sub es_query_tab {
         port => $self->app->config('elasticsearch_port'),
         host => $self->app->config('elasticsearch_host'),
         method => $self->req->method,
-        url_path_parts => $self->req->url->path,
+        url_path => $self->req->url->path,
     );
     $self->app->log->debug("format is $format");
     my $json_parser = ReseqTrack::ElasticsearchProxy::Model::JSONParsers->new(format => $format);
