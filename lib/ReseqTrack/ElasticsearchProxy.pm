@@ -10,6 +10,23 @@ sub startup {
         $self->plugin('CORS');
     }
 
+    if ($self->config('es_rewrite_rules') {
+        #$self->hook('before_routes' => sub {
+        $self->hook('before_dispatch' => sub {
+            my ($controller) = @_;
+            return if $controller->req->headers->header('X-Forwarded-Server');
+            my $es_rewrite_rules = $controller->app->config->('es_rewrite_rules');
+            my $req_path = $controller->req->url->path->to_abs_string;
+            while (my ($from, $to) = each %$es_rewrite_rules) {
+                if ($req_path =~ s/^$from/$to/) {
+                    #$controller->stash(path => $req_path);
+                    $controller->req->url->path->parse($req_path);
+                    return;
+                }
+            }
+        });
+    }
+
     foreach my $path (@{$self->config('allowed_es_plugins')}) {
         $self->routes->get($path)->to(controller=>'elasticsearch', action=>'simple');
     }
