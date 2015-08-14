@@ -15,7 +15,7 @@ sub startup {
         $self->hook('before_dispatch' => sub {
             my ($controller) = @_;
             return if $controller->req->headers->header('X-Forwarded-Server');
-            my $es_rewrite_rules = $controller->app->config->('es_rewrite_rules');
+            my $es_rewrite_rules = $controller->app->config('es_rewrite_rules');
             my $req_path = $controller->req->url->path->to_abs_string;
             while (my ($from, $to) = each %$es_rewrite_rules) {
                 if ($req_path =~ s/^$from/$to/) {
