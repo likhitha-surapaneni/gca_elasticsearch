@@ -4,6 +4,26 @@ use ReseqTrack::ElasticsearchProxy::Model::JSONParsers;
 use ReseqTrack::ElasticsearchProxy::Model::ESTransaction;
 use JSON;
 
+sub simple {
+    my ($self) = @_;
+    my $path = $self->stash('path') || $self->req->url->path->to_abs_string;
+
+    my $es_host = $self->app->config('elasticsearch_host');
+    my $es_port = $self->app->config('elasticsearch_port');
+    my $es_test_path = $self->app->config('elasticsearch_test_path');
+    my $url = "http://$es_host:$es_port$path";
+
+    $self->ua->get($url => sub {
+        my ($ua, $tx) = @_;
+        $self->res->headers->from_hash($tx->res->headers->to_hash);
+        $self->res->code($tx->res->code);
+        $self->write($tx->res->body => sub {
+          $self->finish;
+        });
+    });
+
+}
+
 sub es_query {
     my ($self) = @_;
 
