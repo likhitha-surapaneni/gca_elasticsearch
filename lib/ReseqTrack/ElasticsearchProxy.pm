@@ -10,7 +10,7 @@ sub startup {
         $self->plugin('CORS');
     }
 
-    if ($self->config('es_rewrite_rules') {
+    if ($self->config('es_rewrite_rules')) {
         #$self->hook('before_routes' => sub {
         $self->hook('before_dispatch' => sub {
             my ($controller) = @_;
