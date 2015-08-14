@@ -9,9 +9,11 @@ sub startup {
     if ($self->config('cors.enabled')) {
         $self->plugin('CORS');
     }
+    if (my $static_directory = $self->config('static_directory')) {
+        $self->plugin('Directory', root => $static_directory);
+    }
 
     if ($self->config('es_rewrite_rules')) {
-        #$self->hook('before_routes' => sub {
         $self->hook('before_dispatch' => sub {
             my ($controller) = @_;
             return if $controller->req->headers->header('X-Forwarded-Server');
@@ -19,7 +21,6 @@ sub startup {
             my $req_path = $controller->req->url->path->to_abs_string;
             while (my ($from, $to) = each %$es_rewrite_rules) {
                 if ($req_path =~ s/^$from/$to/) {
-                    #$controller->stash(path => $req_path);
                     $controller->req->url->path->parse($req_path);
                     return;
                 }
