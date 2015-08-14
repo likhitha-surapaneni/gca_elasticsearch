@@ -20,7 +20,7 @@ sub es_query_default {
         port => $self->app->config('elasticsearch_port'),
         host => $self->app->config('elasticsearch_host'),
         method => $self->req->method,
-        url_path => $self->req->url->path,
+        url_path => $self->req->url->path->to_abs_string,
     );
     $es_transaction->set_headers($self->req->headers);
     $es_transaction->errors_callback(sub {$self->finish});
@@ -54,7 +54,7 @@ sub es_query_tab {
         port => $self->app->config('elasticsearch_port'),
         host => $self->app->config('elasticsearch_host'),
         method => $self->req->method,
-        url_path => $self->req->url->path,
+        url_path => $self->req->url->path->to_abs_string,
     );
     $self->app->log->debug("format is $format");
     my $json_parser = ReseqTrack::ElasticsearchProxy::Model::JSONParsers->new(format => $format);
@@ -144,7 +144,7 @@ sub process_request_for_tab {
 
 sub bad_request {
     my ($self) = @_;
-    my $url_path = $self->req->url->path;
+    my $url_path = $self->req->url->path->to_abs_string;
     my $method = $self->req->method;
     my $text = "No handler found for uri [$url_path] and method [$method]";
     $self->render(text => $text, status => 400);
