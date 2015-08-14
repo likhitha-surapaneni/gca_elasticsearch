@@ -30,6 +30,7 @@ sub startup {
 
     foreach my $path (@{$self->config('allowed_es_plugins')}) {
         $self->routes->get($path)->to(controller=>'elasticsearch', action=>'simple');
+        $self->routes->options($path)->to(controller=>'elasticsearch', action=>'simple');
     }
 
     $self->routes->any('/_*')->to(controller=>'elasticsearch', action=>'bad_request');
