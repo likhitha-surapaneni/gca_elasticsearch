@@ -82,7 +82,6 @@ sub es_query_default {
 
 sub es_query_tab {
     my ($self, $es_path, $format) = @_;
-    $es_path =~ s{\.$format$}{};
     my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
         port => $self->app->config('elasticsearch_port'),
         host => $self->app->config('elasticsearch_host'),
