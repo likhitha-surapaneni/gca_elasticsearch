@@ -8,7 +8,6 @@ sub es_query {
     my ($self) = @_;
 
     my $es_path = $self->stash('es_path');
-    $self->app->log->info("es_path is $es_path");
     my @es_path_parts = split('/', $es_path);
     if ($es_path_parts[0] =~ /^_/) {
         return $self->bad_request();
