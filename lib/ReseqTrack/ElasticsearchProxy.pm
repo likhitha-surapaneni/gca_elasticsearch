@@ -29,6 +29,11 @@ sub startup {
             my ($controller) = @_;
             my $req_path = $controller->req->url->path->to_abs_string;
             $req_path =~ s/^$api_path/$es_path/;
+            if ($req_path =~ /\.(\w+)$/) {
+                my $format = $1;
+                $req_path =~ s/\.$format$//;
+                $controller->stash(format => $format);
+            }
             $controller->stash(es_path => $req_path);
         });
         $api->to(controller => 'elasticsearch');
