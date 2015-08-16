@@ -8,7 +8,7 @@ sub es_query {
     my ($self) = @_;
 
     my $es_path = $self->stash('es_path');
-    my @es_path_parts = split('/' $es_path);
+    my @es_path_parts = split('/', $es_path);
     if ($es_path_parts[0] =~ /^_/) {
         return $self->bad_request();
     }
@@ -17,7 +17,7 @@ sub es_query {
             return $self->method_not_allowed();
         }
     }
-    if ($es_path = eq /test/) {
+    if ($es_path eq /test/) {
         $self->simple('/_plugin/testpage');
     }
 
