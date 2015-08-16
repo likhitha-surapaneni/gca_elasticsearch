@@ -17,8 +17,8 @@ sub es_query {
             return $self->method_not_allowed();
         }
     }
-    if ($es_path eq /test/) {
-        $self->simple('/_plugin/testpage');
+    if ($es_path eq '/test') {
+        $self->simple('/_plugin/testpage/');
     }
 
     $self->respond_to(
