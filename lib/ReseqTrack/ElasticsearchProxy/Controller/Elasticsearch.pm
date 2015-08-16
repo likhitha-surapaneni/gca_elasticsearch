@@ -12,7 +12,7 @@ sub es_query {
     if ($es_path_parts[0] =~ /^_/) {
         return $self->bad_request();
     }
-    if ($self->req->method == 'POST') {
+    if ($self->req->method eq 'POST') {
         if (scalar @es_path_parts != 3 || $es_path_parts[2] !~ /^_search(\.\w*)?$/) {
             return $self->method_not_allowed();
         }
