@@ -9,39 +9,40 @@ sub startup {
     if ($self->config('cors.enabled')) {
         $self->plugin('CORS');
     }
+
     if (my $static_directory = $self->config('static_directory')) {
-        $self->plugin('Directory', root => $static_directory, dir_index => 'index.html');
+        $self->plugin('Directory', root => $static_directory, dir_index => 'index.html',
+            handler => sub {
+                my ($controller, $path) = @_;
+                $controller->app->log->info("path is $path");
+            },
+        );
     }
 
-    if ($self->config('es_rewrite_rules')) {
-        $self->hook('before_dispatch' => sub {
-            my ($controller) = @_;
-            return if $controller->req->headers->header('X-Forwarded-Server');
-            my $es_rewrite_rules = $controller->app->config('es_rewrite_rules');
-            my $req_path = $controller->req->url->path->to_abs_string;
-            while (my ($from, $to) = each %$es_rewrite_rules) {
-                if ($req_path =~ s/^$from/$to/) {
-                    $controller->req->url->path->parse($req_path);
-                    return;
-                }
-            }
-        });
+    my @api_routes;
+    push(@api_routes, $self->routes->under('/api' => sub {
+        my ($controller) = @_;
+        my $req_path = $controller->req->url->path->to_abs_string;
+        $req_path =~ s{^/api/}{/};
+        $controller->stash(es_path => $req_path);
+    }));
+    push(@api_routes, $self->routes->under('/lines/api' => sub {
+        my ($controller) = @_;
+        my $req_path = $controller->req->url->path->to_abs_string;
+        $req_path =~ s{^/lines/api/}{/hipsci/};
+        $controller->stash(es_path => $req_path);
+    }));
+
+
+    foreach my $api (@api_routes) {
+        $route->to(controller => 'elasticsearch');
+
+        $api->get('/*')->to(action=>'es_query');
+        $api->post('/*')->to(action=>'es_query');
+        $api->options('/*')->to(action=>'es_query');
+        $api->put('/*')->to(action=>'method_not_allowed');
+        $api->delete('/*')->to(action=>'method_not_allowed');
     }
-
-    foreach my $path (@{$self->config('allowed_es_plugins')}) {
-        $self->routes->get($path)->to(controller=>'elasticsearch', action=>'simple');
-        $self->routes->options($path)->to(controller=>'elasticsearch', action=>'simple');
-    }
-
-    $self->routes->any('/_*')->to(controller=>'elasticsearch', action=>'bad_request');
-    $self->routes->get('/*')->to(controller=>'elasticsearch', action=>'es_query');
-    $self->routes->options('/*')->to(controller=>'elasticsearch', action=>'es_query');
-
-    $self->routes->post('/:path1/:path2/_search')->to(controller=>'elasticsearch', action=>'es_query');
-
-    $self->routes->post('/*')->to(controller=>'elasticsearch', action=>'method_not_allowed');
-    $self->routes->put('/*')->to(controller=>'elasticsearch', action=>'method_not_allowed');
-    $self->routes->delete('/*')->to(controller=>'elasticsearch', action=>'method_not_allowed');
 
 }
 
