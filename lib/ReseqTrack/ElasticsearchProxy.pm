@@ -23,7 +23,7 @@ sub startup {
     }
 
 
-    my $api_routes = $self->conf('api_routes');
+    my $api_routes = $self->config('api_routes');
     while (my ($api_path, $es_path) = each %$api_routes) {
         my $api = $self->routes->under($api_path => sub {
             my ($controller) = @_;
