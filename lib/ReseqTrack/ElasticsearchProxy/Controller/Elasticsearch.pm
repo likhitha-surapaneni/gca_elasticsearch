@@ -13,8 +13,7 @@ sub es_query {
         return $self->bad_request();
     }
     if ($self->req->method eq 'POST') {
-        if (scalar @es_path_parts != 3 || $es_path_parts[2] !~ /^_search(\.\w*)?$/) {
-            $self->app->log->info(join('  |  ', @es_path_parts));
+        if (scalar @es_path_parts != 4 || $es_path_parts[3] !~ /^_search(\.\w*)?$/) {
             return $self->method_not_allowed();
         }
     }
