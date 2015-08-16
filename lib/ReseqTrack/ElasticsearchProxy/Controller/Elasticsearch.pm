@@ -19,7 +19,7 @@ sub es_query {
         }
     }
     if ($es_path eq '/test') {
-        $self->simple('/_plugin/testpage/');
+        return $self->simple('/_plugin/testpage/');
     }
 
     $self->respond_to(
