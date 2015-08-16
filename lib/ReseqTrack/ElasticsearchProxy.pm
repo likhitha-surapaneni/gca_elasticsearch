@@ -15,17 +15,11 @@ sub startup {
         $self->plugin('Directory', root => $static_directory, dir_index => 'index.html',
             handler => sub {
                 my ($controller, $path) = @_;
-                $controller->stash(static_path => $path);
-            },
-        );
-        $self->hook(after_static_dispatch => sub {
-            my ($controller) = @_;
-            if (my $static_path = $controller->stash('static_path')) {
-                if ($static_path =~ /\/index.html/) {
+                if ($path =~ /\/index.html/) {
                     $controller->res->headers->cache_control('max-age=1, no-cache');
                 }
-            }
-        });
+            },
+        );
     }
 
 
