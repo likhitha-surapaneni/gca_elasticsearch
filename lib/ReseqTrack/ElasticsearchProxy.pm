@@ -35,7 +35,7 @@ sub startup {
 
 
     foreach my $api (@api_routes) {
-        $route->to(controller => 'elasticsearch');
+        $api->to(controller => 'elasticsearch');
 
         $api->get('/*')->to(action=>'es_query');
         $api->post('/*')->to(action=>'es_query');
