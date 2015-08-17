@@ -13,9 +13,15 @@ sub startup {
     if (my $static_directory = $self->config('static_directory')) {
         $self->plugin('Directory', root => $static_directory, dir_index => 'index.html',
             handler => sub {
-                # No caching allowed on index files in the static directory
                 my ($controller, $path) = @_;
                 if ($path =~ /\/index.html/) {
+                    my $req_path = $controller->req->url->path->to_abs_string;
+                    # permanent redirect to put a trailing slash on directories
+                    if ($controller->req->url->path->to_abs_string !~ /\/index.html/ && $controller->req->url->path->trailing_slash->to_abs_string) {
+                        $c->res->code(301);
+                        return $controller->redirect_to($controller->req->url->path->trailing_slash(0)
+                    }
+                    # No caching allowed on index files in the static directory
                     $controller->res->headers->cache_control('max-age=1, no-cache');
                 }
             },
