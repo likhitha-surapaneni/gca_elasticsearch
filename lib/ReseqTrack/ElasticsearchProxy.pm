@@ -18,7 +18,7 @@ sub startup {
                     my $req_path = $controller->req->url->path->to_abs_string;
                     # permanent redirect to put a trailing slash on directories
                     if ($controller->req->url->path->to_abs_string !~ /\/index.html/ && $controller->req->url->path->trailing_slash->to_abs_string) {
-                        $c->res->code(301);
+                        $controller->res->code(301);
                         return $controller->redirect_to($controller->req->url->path->trailing_slash(0)
                     }
                     # No caching allowed on index files in the static directory
