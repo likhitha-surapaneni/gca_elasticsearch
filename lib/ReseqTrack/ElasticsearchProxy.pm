@@ -10,10 +10,10 @@ sub startup {
         $self->plugin('CORS');
     }
 
-    # No caching allowed on index files in the static directory
     if (my $static_directory = $self->config('static_directory')) {
         $self->plugin('Directory', root => $static_directory, dir_index => 'index.html',
             handler => sub {
+                # No caching allowed on index files in the static directory
                 my ($controller, $path) = @_;
                 if ($path =~ /\/index.html/) {
                     $controller->res->headers->cache_control('max-age=1, no-cache');
