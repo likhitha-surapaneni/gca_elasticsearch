@@ -15,11 +15,12 @@ sub startup {
             handler => sub {
                 my ($controller, $path) = @_;
                 if ($path =~ /\/index.html/) {
-                    my $req_path = $controller->req->url->path->to_abs_string;
+                    my $req_path = $controller->req->url->path;
                     # permanent redirect to put a trailing slash on directories
-                    if ($controller->req->url->path->to_abs_string !~ /\/index.html/ && $controller->req->url->path->trailing_slash->to_abs_string) {
+                    if ($controller->req->url->path->to_abs_string !~ /\/index.html/ && !$req_path->trailing_slash) {
                         $controller->res->code(301);
-                        return $controller->redirect_to($controller->req->url->path->trailing_slash(1));
+                        $req_path->trailing_slash(1);
+                        return $controller->redirect_to($req_path->to_abs_string);
                     }
                     # No caching allowed on index files in the static directory
                     $controller->res->headers->cache_control('max-age=1, no-cache');
