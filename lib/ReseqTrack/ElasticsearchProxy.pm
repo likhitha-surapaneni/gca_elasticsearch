@@ -10,9 +10,9 @@ sub startup {
         $self->plugin('CORS');
     }
 
-    my $static_dirs = $self->config('static_directories') || {};
-    while (my ($static_dir, $static_dir_options) = each  %$static_dirs) {
-        $self->plugin('Directory', root => $static_dir, dir_index => 'index.html',
+    my $static_dirs = $self->config('static_directories') || [];
+    foreach my $static_dir_options (@$static_dirs) {
+        $self->plugin('Directory', root => $static_dir_options->{dir}, dir_index => 'index.html',
             handler => sub {
                 my ($controller, $path) = @_;
                 if ($path =~ /\/index.html/) {
