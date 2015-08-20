@@ -10,20 +10,25 @@ sub startup {
         $self->plugin('CORS');
     }
 
-    if (my $static_directory = $self->config('static_directory')) {
-        $self->plugin('Directory', root => $static_directory, dir_index => 'index.html',
+    my $static_dirs = $self->config('static_directories') || {};
+    while (my ($static_dir, $static_dir_options) = each  %$static_dirs) {
+        $self->plugin('Directory', root => $static_dir, dir_index => 'index.html',
             handler => sub {
                 my ($controller, $path) = @_;
                 if ($path =~ /\/index.html/) {
-                    my $req_path = $controller->req->url->path;
-                    # permanent redirect to put a trailing slash on directories
-                    if ($controller->req->url->path->to_abs_string !~ /\/index.html/ && !$req_path->trailing_slash) {
-                        $controller->res->code(301);
-                        $req_path->trailing_slash(1);
-                        return $controller->redirect_to($req_path->to_abs_string);
+                    if ($static_dir_options->{trailing_slash}) {
+                        # permanent redirect to put a trailing slash on directories
+                        my $req_path = $controller->req->url->path;
+                        if ($controller->req->url->path->to_abs_string !~ /\/index.html/ && !$req_path->trailing_slash) {
+                            $controller->res->code(301);
+                            $req_path->trailing_slash(1);
+                            return $controller->redirect_to($req_path->to_abs_string);
+                        }
                     }
-                    # No caching allowed on index files in the static directory
-                    $controller->res->headers->cache_control('max-age=1, no-cache');
+                    if ($static_dir_options->{no_cache}) {
+                        # No caching allowed on index files in the static directory
+                        $controller->res->headers->cache_control('max-age=1, no-cache');
+                    }
                 }
             },
         );
