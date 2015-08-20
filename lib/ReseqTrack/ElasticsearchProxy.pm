@@ -12,7 +12,7 @@ sub startup {
 
     my $static_dirs = $self->config('static_directories') || [];
     foreach my $static_dir_options (@$static_dirs) {
-        $self->plugin('Directory', root => $static_dir_options->{dir}, dir_index => 'index.html',
+        $self->plugin('Directory', root => $static_dir_options->{dir}, dir_index => 'index.html', auto_index => $static_dir_options->{auto_index},
             handler => sub {
                 my ($controller, $path) = @_;
                 if ($path =~ /\/index.html/) {
