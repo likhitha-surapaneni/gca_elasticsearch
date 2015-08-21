@@ -35,9 +35,9 @@ sub set_body {
     $self->transaction->req->body($body);
 };
 
-sub start {
+sub non_blocking_start {
     my ($self) = @_;
-    $self->user_agent->start($self->transaction);
+    $self->user_agent->start($self->transaction => sub {return;});
 };
 
 sub pause {

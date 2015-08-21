@@ -70,12 +70,12 @@ sub es_query_default {
     $es_transaction->finished_callback( sub {$self->finish});
     if ($self->req->is_finished) {
         $es_transaction->set_body($self->req->body);
-        $es_transaction->start;
+        $es_transaction->non_blocking_start;
     }
     else {
         $self->req->on(finish => sub {
             $es_transaction->set_body($self->req->body);
-            $es_transaction->start;
+            $es_transaction->non_blocking_start;
         });
     }
 }
@@ -171,7 +171,7 @@ sub process_request_for_tab {
     }
     delete $req_body->{column_names};
     $es_transaction->set_body(JSON::encode_json($req_body));
-    $es_transaction->start;
+    $es_transaction->non_blocking_start;
 };
 
 sub bad_request {
