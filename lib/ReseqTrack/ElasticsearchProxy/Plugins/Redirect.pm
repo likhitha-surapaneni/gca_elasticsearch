@@ -38,7 +38,7 @@ sub register {
     $self->refresh_redirection_hash($file);
 
     Mojo::IOLoop->recurring(
-        300 => sub { $self->refresh_direction_hash($file)}
+        300 => sub { $self->refresh_redirection_hash($file)}
     );
 
     $app->hook( before_routes => sub {
