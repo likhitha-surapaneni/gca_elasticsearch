@@ -1,4 +1,4 @@
-package ReseqTrack::ElasticsearchProx::Plugins::Redirect;
+package ReseqTrack::ElasticsearchProxy::Plugins::Redirect;
 use Mojo::Base qw{ Mojolicious::Plugin };
 use Mojo::Util qw(slurp);
 use Mojo::IOLoop;
