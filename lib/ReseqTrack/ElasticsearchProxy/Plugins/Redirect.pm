@@ -42,7 +42,7 @@ sub register {
     );
 
     #$app->hook( before_routes => sub {
-    $app->routes->any('/*')->to(cb => {
+    $app->routes->any('/*')->to(cb => sub {
         my ($controller) = @_;
         if (my $redirect = $self->{redirection_hash}{Mojo::Util::url_unescape( $controller->req->url->path )}) {
             $controller->redirect_to($redirect);
