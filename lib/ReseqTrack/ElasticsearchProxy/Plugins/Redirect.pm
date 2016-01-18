@@ -22,11 +22,16 @@ sub refresh_redirection_hash {
 
     my %redirect_to;
     my $redirections = slurp($file);
+    LINE:
     foreach my $line (split("\n", $redirections)) {
         my ($from, $to) = split("\t", $line);
-        if ($from && $to) {
-            $redirect_to{$from} = $to;
-        }
+        next LINE if !$from;
+        next LINE if !$to;
+        $from =~ s{/+(index.html)?$}{};
+        $to =~ s{/+(index.html)?$}{};
+        $from ||= '/';
+        $to ||= '/';
+        $redirect_to{$from} = $to;
     }
     $self->{redirection_hash} = \%redirect_to;
 }
@@ -44,7 +49,10 @@ sub register {
 
     $app->routes->add_condition('has_redirect' => sub {
         my ($route, $controller, $captures) = @_;
-        if (my $redirect = $self->{redirection_hash}{Mojo::Util::url_unescape( $controller->req->url->path )}) {
+        my $from = Mojo::Util::url_unescape( $controller->req->url->path );
+        $from =~ s{/+(index.html)?$}{};
+        $from ||= '/';
+        if (my $redirect = $self->{redirection_hash}{$from}) {
             $controller->stash(redirect_to => $redirect);
             return 1;
         }
