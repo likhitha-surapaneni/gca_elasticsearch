@@ -11,7 +11,7 @@ sub startup {
     }
 
     if (my $redirect_file = $self->config('redirect_file')) {
-        $self->plugin('ReseqTrack::ElasticsearchProxy::Plugins::Redirect', $redirect_file);
+        $self->plugin('ReseqTrack::ElasticsearchProxy::Plugins::Redirect', file => $redirect_file);
     }
 
     my $static_dirs = $self->config('static_directories') || [];

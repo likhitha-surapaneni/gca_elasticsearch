@@ -25,7 +25,8 @@ sub refresh_redirection_hash {
 }
 
 sub register {
-    my ($self, $app, $file) = @_;
+    my ($self, $app, $args) = @_;
+    my $file = $args->{file};
 
     $self->refresh_redirection_hash($file);
 
