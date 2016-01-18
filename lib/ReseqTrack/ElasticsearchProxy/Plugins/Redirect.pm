@@ -53,7 +53,7 @@ sub register {
 
     $app->routes->any('/*')->over('has_redirect' => 1)->to(cb => sub {
         my ($controller) = @_;
-        $controller->redirect_to($controller->stash('redirect_to');
+        $controller->redirect_to($controller->stash('redirect_to'));
     });
 }
 
