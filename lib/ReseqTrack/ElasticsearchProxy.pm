@@ -58,6 +58,11 @@ sub startup {
         $api->delete('/*')->to(action=>'method_not_allowed');
     }
 
+    if (my $redirect_file = $self->config('redirect_file')) {
+        $self->plugin('ReseqTrack::ElasticsearchProxy::Plugins::Redirect', file => $redirect_file);
+    }
+
+
 }
 
 1;
