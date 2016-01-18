@@ -43,8 +43,9 @@ sub register {
 
     $app->hook( before_routes => sub {
         my ($controller) = @_;
-        my $redirect = $self->{redirection_hash}{Mojo::Util::url_unescape( $controller->req->url->path )};
-        $controller->redirect_to($redirect);
+        if (my $redirect = $self->{redirection_hash}{Mojo::Util::url_unescape( $controller->req->url->path )}) {
+            $controller->redirect_to($redirect);
+        }
     });
 }
 
