@@ -7,6 +7,13 @@ use File::stat;
 
 sub refresh_redirection_hash {
     my ($self, $file) = @_;
+
+    if (! -f $file) {
+        $self->{redirection_hash} = {};
+        $self->{mtime} = undef;
+        return;
+    }
+
     my $st = stat($file) or die "could not stat $file $!";
     my $mtime = $st->mtime;
 
