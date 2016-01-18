@@ -10,6 +10,10 @@ sub startup {
         $self->plugin('CORS');
     }
 
+    if (my $redirect_file = $self->config('redirect_file')) {
+        $self->plugin('ReseqTrack::ElasticsearchProxy::Plugins::Redirect', $redirect_file);
+    }
+
     my $static_dirs = $self->config('static_directories') || [];
     foreach my $static_dir_options (@$static_dirs) {
         $self->plugin('Directory', root => $static_dir_options->{dir}, dir_index => 'index.html', auto_index => $static_dir_options->{auto_index},
@@ -57,6 +61,9 @@ sub startup {
         $api->put('/*')->to(action=>'method_not_allowed');
         $api->delete('/*')->to(action=>'method_not_allowed');
     }
+
+
+
 
 }
 
