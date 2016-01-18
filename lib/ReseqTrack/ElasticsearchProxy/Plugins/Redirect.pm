@@ -41,7 +41,8 @@ sub register {
         300 => sub { $self->refresh_redirection_hash($file)}
     );
 
-    $app->hook( before_routes => sub {
+    #$app->hook( before_routes => sub {
+    $app->routes->any('/*')->to(cb => {
         my ($controller) = @_;
         if (my $redirect = $self->{redirection_hash}{Mojo::Util::url_unescape( $controller->req->url->path )}) {
             $controller->redirect_to($redirect);
