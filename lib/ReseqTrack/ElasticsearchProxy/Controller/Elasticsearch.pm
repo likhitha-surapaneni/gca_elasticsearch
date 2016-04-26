@@ -13,9 +13,10 @@ sub es_query {
         return $self->bad_request();
     }
     if ($self->req->method eq 'POST') {
-        if (scalar @es_path_parts != 4 || $es_path_parts[3] !~ /^_search(\.\w*)?$/) {
+        if (scalar @es_path_parts < 4 || scalar @es_path_parts >5 || $es_path_parts[3] !~ /^_search(\.\w*)?$/) {
             return $self->method_not_allowed();
         }
+        $es_path = join('/', @es_path_parts[0..3]);
     }
     if ($es_path eq '/test') {
         return $self->simple('/_plugin/testpage/');

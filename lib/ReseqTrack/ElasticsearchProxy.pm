@@ -32,8 +32,20 @@ sub startup {
                 }
             },
         );
-    }
 
+        foreach my $app_home (@{$static_dir_options->{angularjs_html5_apps}}) {
+            $app_home =~ s{/*$}{};
+            my $index_file = join('/', $static_dir_options->{dir}, $app_home, 'index.html');
+            $self->routes->get($app_home.'/*' => sub {
+                my ($controller) = @_;
+                if (-f $index_file) {
+                    $controller->res->headers->cache_control('max-age=1, no-cache');
+                    my $index_file_content = Mojo::Util::slurp($index_file);
+                    $controller->render( data => $index_file_content, format => 'html');
+                }
+            });
+        }
+    }
 
     my $api_routes = $self->config('api_routes');
     while (my ($api_path, $es_path) = each %$api_routes) {
@@ -57,6 +69,11 @@ sub startup {
         $api->put('/*')->to(action=>'method_not_allowed');
         $api->delete('/*')->to(action=>'method_not_allowed');
     }
+
+    if (my $redirect_file = $self->config('redirect_file')) {
+        $self->plugin('ReseqTrack::ElasticsearchProxy::Plugins::Redirect', file => $redirect_file);
+    }
+
 
 }
 
