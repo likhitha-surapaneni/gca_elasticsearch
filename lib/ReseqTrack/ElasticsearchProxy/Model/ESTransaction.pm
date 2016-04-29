@@ -10,6 +10,7 @@ has 'port' => (is => 'rw', isa => 'Int');
 has 'host' => (is => 'rw', isa => 'Str');
 has 'method' => (is => 'rw', isa => 'Str');
 has 'url_path' => (is => 'rw', isa => 'Str');
+has 'url_params' => (is => 'rw', isa => 'Str');
 has 'user_agent' => (is => 'ro', isa => 'Mojo::UserAgent',
     default => sub { return Mojo::UserAgent->new()->ioloop(Mojo::IOLoop->new); }
 );
@@ -17,12 +18,18 @@ has 'transaction' => (is => 'rw', isa => 'Mojo::Transaction');
 
 sub BUILD {
     my ($self) = @_;
-    my $es_url = sprintf('http://%s:%s/%s', $self->host, $self->port, $self->url_path);
-    my $es_tx = $self->user_agent->build_tx($self->method => $es_url);
-    $es_tx->res->max_message_size(0);
-    $es_tx->res->content->unsubscribe('read');
-    $self->transaction($es_tx);
+    $self->new_transaction();
 };
+
+sub new_transaction {
+    my ($self) = @_;
+    my $es_url = sprintf('http://%s:%s/%s', $self->host, $self->port, $self->url_path);
+    if (my $params = $self->url_params) {
+        $es_url .= sprintf('?%s', $params);
+    }
+    my $es_tx = $self->user_agent->build_tx($self->method => $es_url);
+    $self->transaction($es_tx);
+}
 
 sub set_headers {
     my ($self, $headers) = @_;
@@ -38,6 +45,7 @@ sub set_body {
 sub non_blocking_start {
     my ($self) = @_;
     $self->user_agent->start($self->transaction => sub {return;});
+    $self->user_agent->ioloop->start;
 };
 
 sub pause {
@@ -66,6 +74,8 @@ sub headers_callback {
 
 sub partial_content_callback {
     my ($self, $callback) = @_;
+    $self->transaction->res->max_message_size(0);
+    $self->transaction->res->content->unsubscribe('read');
     $self->transaction->res->content->on(read => sub {
         my ($content, $bytes) = @_;
         &{$callback}($bytes);
