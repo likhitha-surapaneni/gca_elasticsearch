@@ -118,6 +118,7 @@ sub es_query_tab {
         $req_body->{sort} = ["_doc"];
     }
     $req_body->{size} = ! defined $num_hits ? 100
+                        : $num_hits < 0 ? 100
                         : $num_hits < 100 ? $num_hits
                         : 100;
 

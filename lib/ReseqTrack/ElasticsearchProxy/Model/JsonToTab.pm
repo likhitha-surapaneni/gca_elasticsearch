@@ -45,7 +45,7 @@ sub process_json {
         } @{$self->fields});
         $return_string .= "\n";
         $num_hits_written +=1;
-        if (defined $num_hits_req && $num_hits_written == $num_hits_req) {
+        if (defined $num_hits_req && $num_hits >= 0 && $num_hits_written == $num_hits_req) {
           $self->is_finished(1);
           last HIT;
         }
