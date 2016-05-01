@@ -141,7 +141,7 @@ sub es_query_tab {
 
     $es_transaction->headers_callback(sub {\&first_headers_callback});
     $es_transaction->headers_callback(sub {$self->_first_headers_callback(@_, $tab_writer)});
-    $es_transaction->finished_callback(sub {$self->_finished_callback($es_transaction, $tab_writer)});
+    $es_transaction->finished_res_callback(sub {$self->_finished_res_callback($es_transaction, $tab_writer)});
     $es_transaction->errors_callback(sub {$self->finish});
 
     $es_transaction->set_body(JSON::encode_json($req_body));
@@ -164,7 +164,7 @@ sub _first_headers_callback {
     $self->write($tab_writer->header_lines => sub {return;});
 }
 
-sub _finished_callback {
+sub _finished_res_callback {
     my ($self, $es_transaction, $tab_writer) = @_;
     my $es_res = $es_transaction->transaction->res;
     if ($es_res->code !=200) {
@@ -188,7 +188,7 @@ sub _finished_callback {
 
     $es_transaction->url_path('/_search/scroll');
     $es_transaction->new_transaction();
-    $es_transaction->finished_callback(sub {$self->_finished_callback($es_transaction, $tab_writer)});
+    $es_transaction->finished_res_callback(sub {$self->_finished_res_callback($es_transaction, $tab_writer)});
     $es_transaction->errors_callback(sub {$self->finish});
 
     $es_transaction->set_body($tab_writer->scroll_id);

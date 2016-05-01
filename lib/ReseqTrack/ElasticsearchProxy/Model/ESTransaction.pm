@@ -85,6 +85,10 @@ sub finished_callback {
     my ($self, $callback) = @_;
     $self->transaction->on(finish => $callback);
 };
+sub finished_res_callback {
+    my ($self, $callback) = @_;
+    $self->transaction->res->on(finish => $callback);
+};
 
 __PACKAGE__->meta->make_immutable;
 
