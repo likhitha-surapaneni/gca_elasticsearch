@@ -139,8 +139,7 @@ sub es_query_tab {
 
 
 
-    $es_transaction->headers_callback(sub {\&first_headers_callback});
-    $es_transaction->headers_callback(sub {$self->_first_headers_callback(@_, $tab_writer)});
+    $es_transaction->headers_callback(sub {$self->_first_headers_callback(@_, $es_transaction, $tab_writer)});
     $es_transaction->finished_res_callback(sub {$self->_finished_res_callback($es_transaction, $tab_writer)});
     $es_transaction->errors_callback(sub {$self->finish});
 
@@ -149,11 +148,11 @@ sub es_query_tab {
 };
 
 sub _first_headers_callback {
-    my ($self, $es_headers, $es_code, $tab_writer) = @_;
+    my ($self, $es_headers, $es_code, $es_transaction, $tab_writer) = @_;
     #$self->app->log->debug('First headers');
 #use Data::Dumper; $self->app->log->debug(Data::Dumper->new([$es_headers])->Dump);
     if ($es_code !=200) {
-        $self->render('', $es_code);
+        $self->render(text => $es_transaction->transaction->res->message, status => $es_code);
         return $self->finish;
     }
     delete $es_headers->{'Content-Length'};
@@ -168,15 +167,15 @@ sub _finished_res_callback {
     my ($self, $es_transaction, $tab_writer) = @_;
     my $es_res = $es_transaction->transaction->res;
     if ($es_res->code !=200) {
-        $self->write(sprintf('error getting search hits: %s', $es_res->message) => sub {$self->finish;});
-        $self->res->code(400);
+        $self->write(sprintf('Truncated output: %s', $es_res->message) => sub {$self->finish;});
+        $self->res->code(500);
         return;
     }
 
     my $tab_lines = eval {return $tab_writer->process_json($es_res->body)};
     if ($@) {
-        $self->write('Error converting json to delimited text' => sub {$self->finish;});
-        $self->res->code(400);
+        $self->write('Truncated output: Error converting json to delimited text' => sub {$self->finish;});
+        $self->res->code(500);
         return;
     }
 
