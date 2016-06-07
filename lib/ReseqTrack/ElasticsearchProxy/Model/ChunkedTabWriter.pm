@@ -1,8 +1,7 @@
-package ReseqTrack::ElasticsearchProxy::Model::JsonToTab;
+package ReseqTrack::ElasticsearchProxy::Model::ChunkedTabWriter;
 
 use namespace::autoclean;
 use Moose;
-use JSON;
 use v5.16;
 
 has 'column_names' => (is => 'rw', isa => 'ArrayRef[Str]');
@@ -27,8 +26,7 @@ sub BUILD {
 
 
 sub process_json {
-    my ($self, $json_string) = @_;
-    my $json_obj = JSON::decode_json($json_string);
+    my ($self, $json_obj) = @_;
 
     my $sep = fc($self->format) eq fc('csv') ? ',' : "\t";
     my $sub_separator = fc($self->format) eq 'csv' ? ';' : ",";

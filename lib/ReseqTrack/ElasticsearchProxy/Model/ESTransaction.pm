@@ -16,6 +16,8 @@ has 'user_agent' => (is => 'ro', isa => 'Mojo::UserAgent',
 );
 has 'transaction' => (is => 'rw', isa => 'Mojo::Transaction');
 
+has 'finished_callback' => (is => 'rw', isa => 'CodeRef');
+
 sub BUILD {
     my ($self) = @_;
     $self->new_transaction();
@@ -44,7 +46,7 @@ sub set_body {
 
 sub non_blocking_start {
     my ($self) = @_;
-    $self->user_agent->start($self->transaction => sub {return;});
+    $self->user_agent->start($self->transaction => $self->finished_callback || sub {return;});
     $self->user_agent->ioloop->start;
 };
 
@@ -55,14 +57,6 @@ sub pause {
 sub resume {
     my ($self) = @_;
     $self->user_agent->ioloop->start;
-};
-
-sub errors_callback {
-    my ($self, $callback) = @_;
-    $self->user_agent->on(error => sub {
-        my ($es_user_agent, $error_string) = @_;
-        &{$callback}($error_string);
-    });
 };
 
 sub headers_callback {
@@ -81,10 +75,7 @@ sub partial_content_callback {
         &{$callback}($bytes);
     });
 };
-sub finished_callback {
-    my ($self, $callback) = @_;
-    $self->transaction->on(finish => $callback);
-};
+
 sub finished_res_callback {
     my ($self, $callback) = @_;
     $self->transaction->res->on(finish => $callback);

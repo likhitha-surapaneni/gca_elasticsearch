@@ -1,6 +1,5 @@
 requires 'Mojolicious';
 requires 'Mojolicious::Plugin::CORS';
-requires 'JSON';
 requires 'Moose';
 requires 'namespace::autoclean';
 
