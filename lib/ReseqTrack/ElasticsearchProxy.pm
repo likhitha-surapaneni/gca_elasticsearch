@@ -13,6 +13,8 @@ sub startup {
     if (my $api_routes = $self->config('api_routes')) {
       $self->plugin('ReseqTrack::ElasticsearchProxy::Plugins::API',
         routes => $api_routes,
+        es_host => $self->config('elasticsearch_host'),
+        es_port => $self->config('elasticsearch_port'),
       );
     }
 

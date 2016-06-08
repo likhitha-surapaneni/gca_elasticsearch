@@ -117,8 +117,8 @@ sub es_query_direct {
   my $es_path = $options{es_path} || $self->stash('es_path') || die "did not get es_path";
 
   my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
-      port => $self->app->config('elasticsearch_port'),
-      host => $self->app->config('elasticsearch_host'),
+      port => $self->stash('es_port'),
+      host => $self->stash('es_host'),
       method => $self->req->method,
       url_path => $es_path,
       url_params => $self->req->url->query->to_string,
@@ -164,8 +164,8 @@ sub es_query_json_chunked {
   my $query_params = $self->req->url->query;
 
   my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
-      port => $self->app->config('elasticsearch_port'),
-      host => $self->app->config('elasticsearch_host'),
+      port => $self->stash('es_port'),
+      host => $self->stash('es_host'),
       method => $self->req->method,
       url_path => $self->stash('es_path'),
       url_params => $self->req->url->query->merge(scroll => '1m')->to_string,
@@ -296,8 +296,8 @@ sub es_query_tab_chunked {
       format => $format
   );
   my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
-      port => $self->app->config('elasticsearch_port'),
-      host => $self->app->config('elasticsearch_host'),
+      port => $self->stash('es_port'),
+      host => $self->stash('es_host'),
       method => $self->req->method,
       url_path => $es_path,
       url_params => 'scroll=1m'
