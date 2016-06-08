@@ -4,55 +4,6 @@ use ReseqTrack::ElasticsearchProxy::Model::ChunkedTabWriter;
 use ReseqTrack::ElasticsearchProxy::Model::ChunkedJsonWriter;
 use ReseqTrack::ElasticsearchProxy::Model::ESTransaction;
 
-sub es_query_router {
-  my ($self) = @_;
-  eval{
-    my $path_parts = Mojo::Path->new($self->stash('es_path'))->parts;
-
-    my @underscored = map {/^_/ ? 1 : 0} @$path_parts;
-
-    if (scalar @$path_parts && $underscored[0]) {
-      # Allow use of the scroll API and of our testpage plugin
-      return $self->es_query_direct() if @$path_parts == 2 && $path_parts->[0] eq '_search' && $path_parts->[1] eq 'scroll';
-      return $self->es_query_direct() if @$path_parts == 2 && $path_parts->[0] eq '_plugin' && $path_parts->[1] eq 'testpage';
-
-      # Disallow anything else starting with '_'
-      return $self->method_not_allowed;
-    }
-
-
-    # Disallow most of the index/cluster APIs
-    return $self->method_not_allowed if scalar @$path_parts < 3;
-
-    # Allow the _mapping API e.g. /hipsci/_mapping/donor
-    return $self->es_query_direct() if $path_parts->[1] eq '_mapping' && !$underscored[2];
-    # Disallow e.g. /hipsci/_settings or /hipsci/_flush
-    return if $underscored[1];
-
-    # allow _search, but let the search router work out how to handle it
-    return $self->es_search_router() if $path_parts->[2] eq '_search';
-
-    # allow _count and _validate APIs
-    return $self->es_query_direct() if $path_parts->[2] eq '_count';
-    return $self->es_query_direct() if $path_parts->[2] eq '_validate';
-    # disallow e.g. /hipsci/donor/_action
-    return $self->method_not_allowed if $underscored[2];
-
-    if (@$path_parts > 3 && $underscored[3]) {
-      # allow e.g. /hipsci/donor/name/_mlt
-      return $self->es_query_direct() if $path_parts->[2] = '_mlt';
-      # disallow e.g. /hipsci/donor/name/_action
-      return $self->method_not_allowed;
-    }
-
-    # allow e.g. /hipsci/donor/name
-    return $self->es_query_direct();
-  };
-  if ($@) {
-    $self->server_error($@);
-  }
-}
-
 sub es_search_router {
   my ($self) = @_;
 
@@ -114,7 +65,7 @@ sub es_query_direct {
   my ($self, %options) = @_;
 
   my $req_body = $options{req_body} || $self->req->body;
-  my $es_path = $options{es_path} || $self->stash('es_path') || die "did not get es_path";
+  my $es_path = $self->stash('es_path') || die "did not get es_path";
 
   my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
       port => $self->stash('es_port'),
