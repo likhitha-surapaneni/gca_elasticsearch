@@ -26,10 +26,8 @@ sub register {
     $api->to(controller => 'elasticsearch');
     foreach my $api_route (@{$args->{routes}}) {
       my $api_path = $api_route->{from};
-      $api->route($api_path)->via('GET', 'POST')->to(action => 'es_query_router');
-      $api->route("$api_path/*")->via('GET', 'POST')->to(action => 'es_query_router');
-      $api->route($api_path)->to(action=>'method_not_allowed');
-      $api->route("$api_path/*")->to(action=>'method_not_allowed');
+      $api->any(['GET', 'POST'], "$api_path/*whatever" => {whatever => ''})->to(action => 'es_query_router');
+      $api->any("$api_path/*whatever")->to(action=>'method_not_allowed');
     }
 
 }
