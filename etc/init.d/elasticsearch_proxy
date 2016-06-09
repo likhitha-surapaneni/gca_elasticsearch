@@ -9,11 +9,9 @@
 # Description:      Starts elasticsearch_proxy using hypnotoad
 ### END INIT INFO
  
-ES_HOME=/Users/streeter/git_repositories/gca_elasticsearch
+ES_HOME=`dirname $0`/../../
 SCRIPT=$ES_HOME/scripts/elasticsearch_proxy/elasticsearch_proxy.pl
 
-test -d $ES_HOME || exit 0
- 
 set -e
  
 case "$1" in
