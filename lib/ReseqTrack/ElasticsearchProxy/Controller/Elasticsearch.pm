@@ -7,6 +7,16 @@ use ReseqTrack::ElasticsearchProxy::Model::ESTransaction;
 sub es_search_router {
   my ($self) = @_;
 
+  $self->render_later;
+
+  Mojo::IOLoop->delay(sub {
+    my ($delay) = @_;
+    return $delay->pass if $self->req->is_finished;
+    $self->req->on(finish => $delay->begin(0,0);
+  },
+  sub {
+    my ($delay) = @_;
+
   my $req_body;
   if ($self->req->headers->content_type eq 'application/x-www-form-urlencoded') {
     if (my $json = $self->req->body_params->to_hash->{json}) {
@@ -59,10 +69,18 @@ sub es_search_router {
 
   # use regular search for anything with hits size <100
   return $self->es_query_direct(req_body => $req_body);
+
+  })->catch(sub {
+    my ($delay, $err) = @_;
+    $self->server_error($err);
+  })->wait;
+
 }
 
 sub es_query_direct {
   my ($self, %options) = @_;
+  eval {
+  $self->render_later;
 
   my $req_body = $options{req_body} || $self->req->body;
   my $es_path = $self->stash('es_path') || die "did not get es_path";
@@ -99,6 +117,10 @@ sub es_query_direct {
   $es_transaction->non_blocking_start;
 
   $self->render_later;
+  };
+  if ($@) {
+    $self->server_error($@);
+  }
 }
 
 sub es_query_json_chunked {
@@ -147,7 +169,6 @@ sub es_query_json_chunked {
   )->catch(sub {
     my ($delay, $err) = @_;
     $self->server_error($err);
-    $self->finish;
   })->wait;
 
   $self->render_later;
