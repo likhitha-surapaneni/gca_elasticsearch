@@ -47,6 +47,9 @@ sub startup {
       $c->reply->static($c->stash('whatever') . '/index.html');
     });
 
+    # This is plugin reads a tab-delimited list of paths to redirect
+    # First column is "from", second column is "to"
+    # File is read every five minutes on a timer in case the file is updated
     if (my $redirect_file = $self->config('redirect_file')) {
         $self->plugin('ReseqTrack::ElasticsearchProxy::Plugins::Redirect', file => $redirect_file);
     }
