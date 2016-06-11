@@ -31,6 +31,12 @@ sub startup {
       push @{$self->static->paths}, @$static_dirs;
     }
 
+    # Files in these directories become templates
+    #e.g. exception.production.html.ep not_found.production.html.ep
+    if (my $template_dirs = $self->config('template_directories')) {
+      push @{$self->renderer->paths}, @$template_dirs;
+    }
+
     # This plugin makes sure angularjs apps are routed correctly
     # It makes sure index.html files are not cached.
     # use the angularjs_html5_apps array if the app uses angularjs option $location.html5Mode(true)
