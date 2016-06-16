@@ -53,8 +53,8 @@ sub register {
     # allow _count and _validate APIs
     # ...but disallow aything else with an underscore in 3rd position
     $api->any(['GET', 'POST'] => '/:index/:type/_count/*whatever' => {whatever => ''})->to(action => 'es_query_direct');
-    $api->any(['GET', 'POST'] => '/:index/:type/_validate/*whatever' => {whateer => ''})->to(action => 'es_query_direct');
-    $api->any('/:index/:type/_*whatever' => {whateer => ''})->to(action => 'method_not_allowed');
+    $api->any(['GET', 'POST'] => '/:index/:type/_validate/*whatever' => {whatever => ''})->to(action => 'es_query_direct');
+    $api->any('/:index/:type/_*whatever' => {whatever => ''})->to(action => 'method_not_allowed');
 
     # allow _count and _validate APIs
     # ...but disallow aything else with an underscore in 4th position
