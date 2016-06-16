@@ -9,11 +9,19 @@
 # Description:      Starts elasticsearch_proxy using hypnotoad
 ### END INIT INFO
  
-ES_HOME=/nfs/public/rw/reseq-info/hipsci_portal/gca_elasticsearch
+ES_HOME=`dirname $0`/../../
 SCRIPT=$ES_HOME/scripts/elasticsearch_proxy/elasticsearch_proxy.pl
 
-test -d $ES_HOME || exit 0
- 
+case $HOSTNAME in
+  ('ves-hx-e6.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.igsr.conf;;
+  ('ves-pg-e6.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.igsr.conf;;
+  ('ves-oy-e6.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.igsr.conf;;
+  ('ves-hx-e5.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf;;
+  ('ves-pg-e5.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf;;
+  ('ves-oy-e5.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf;;
+esac
+export MOJO_CONF
+
 set -e
  
 case "$1" in

@@ -10,19 +10,28 @@ has 'port' => (is => 'rw', isa => 'Int');
 has 'host' => (is => 'rw', isa => 'Str');
 has 'method' => (is => 'rw', isa => 'Str');
 has 'url_path' => (is => 'rw', isa => 'Str');
+has 'url_params' => (is => 'rw', isa => 'Str');
 has 'user_agent' => (is => 'ro', isa => 'Mojo::UserAgent',
     default => sub { return Mojo::UserAgent->new()->ioloop(Mojo::IOLoop->new); }
 );
 has 'transaction' => (is => 'rw', isa => 'Mojo::Transaction');
 
+has 'finished_callback' => (is => 'rw', isa => 'CodeRef');
+
 sub BUILD {
     my ($self) = @_;
-    my $es_url = sprintf('http://%s:%s/%s', $self->host, $self->port, $self->url_path);
-    my $es_tx = $self->user_agent->build_tx($self->method => $es_url);
-    $es_tx->res->max_message_size(0);
-    $es_tx->res->content->unsubscribe('read');
-    $self->transaction($es_tx);
+    $self->new_transaction();
 };
+
+sub new_transaction {
+    my ($self) = @_;
+    my $es_url = sprintf('http://%s:%s/%s', $self->host, $self->port, $self->url_path);
+    if (my $params = $self->url_params) {
+        $es_url .= sprintf('?%s', $params);
+    }
+    my $es_tx = $self->user_agent->build_tx($self->method => $es_url);
+    $self->transaction($es_tx);
+}
 
 sub set_headers {
     my ($self, $headers) = @_;
@@ -37,7 +46,8 @@ sub set_body {
 
 sub non_blocking_start {
     my ($self) = @_;
-    $self->user_agent->start($self->transaction => sub {return;});
+    $self->user_agent->start($self->transaction => $self->finished_callback || sub {return;});
+    $self->user_agent->ioloop->start;
 };
 
 sub pause {
@@ -49,14 +59,6 @@ sub resume {
     $self->user_agent->ioloop->start;
 };
 
-sub errors_callback {
-    my ($self, $callback) = @_;
-    $self->user_agent->on(error => sub {
-        my ($es_user_agent, $error_string) = @_;
-        &{$callback}($error_string);
-    });
-};
-
 sub headers_callback {
     my ($self, $callback) = @_;
     $self->transaction->res->content->on(body => sub {
@@ -66,14 +68,17 @@ sub headers_callback {
 
 sub partial_content_callback {
     my ($self, $callback) = @_;
+    $self->transaction->res->max_message_size(0);
+    $self->transaction->res->content->unsubscribe('read');
     $self->transaction->res->content->on(read => sub {
         my ($content, $bytes) = @_;
         &{$callback}($bytes);
     });
 };
-sub finished_callback {
+
+sub finished_res_callback {
     my ($self, $callback) = @_;
-    $self->transaction->on(finish => $callback);
+    $self->transaction->res->on(finish => $callback);
 };
 
 __PACKAGE__->meta->make_immutable;

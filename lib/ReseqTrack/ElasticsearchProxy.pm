@@ -4,72 +4,58 @@ use Mojo::Base 'Mojolicious';
 sub startup {
     my ($self) = @_;
 
-    $self->plugin('Config', file => $self->home->rel_file('config/elasticsearchproxy.conf'));
+    $self->plugin('Config', file => $self->home->rel_file($ENV{MOJO_CONF} || 'config/elasticsearchproxy.conf'));
 
+    if (my $log_file = $self->config('log_file')) {
+      $self->log->path($log_file);
+    }
+
+    # Enable cross-origin research sharing
+    # Read more about it: https://en.wikipedia.org/wiki/Cross-origin_resource_sharing
+    # Good for a sharable API
     if ($self->config('cors.enabled')) {
         $self->plugin('CORS');
     }
 
-    my $static_dirs = $self->config('static_directories') || [];
-    foreach my $static_dir_options (@$static_dirs) {
-        $self->plugin('Directory', root => $static_dir_options->{dir}, dir_index => 'index.html', auto_index => $static_dir_options->{auto_index},
-            handler => sub {
-                my ($controller, $path) = @_;
-                if ($path =~ /\/index.html/) {
-                    if ($static_dir_options->{trailing_slash}) {
-                        # permanent redirect to put a trailing slash on directories
-                        my $req_path = $controller->req->url->path;
-                        if ($controller->req->url->path->to_abs_string !~ /\/index.html/ && !$req_path->trailing_slash) {
-                            $controller->res->code(301);
-                            $req_path->trailing_slash(1);
-                            return $controller->redirect_to($req_path->to_abs_string);
-                        }
-                    }
-                    if ($static_dir_options->{no_cache}) {
-                        # No caching allowed on index files in the static directory
-                        $controller->res->headers->cache_control('max-age=1, no-cache');
-                    }
-                }
-            },
-        );
-
-        foreach my $app_home (@{$static_dir_options->{angularjs_html5_apps}}) {
-            $app_home =~ s{/*$}{};
-            my $index_file = join('/', $static_dir_options->{dir}, $app_home, 'index.html');
-            $self->routes->get($app_home.'/*' => sub {
-                my ($controller) = @_;
-                if (-f $index_file) {
-                    $controller->res->headers->cache_control('max-age=1, no-cache');
-                    my $index_file_content = Mojo::Util::slurp($index_file);
-                    $controller->render( data => $index_file_content, format => 'html');
-                }
-            });
-        }
+    # This plugin does all the routing for the elasticsearch API
+    if (my $api_routes = $self->config('api_routes')) {
+      $self->plugin('ReseqTrack::ElasticsearchProxy::Plugins::API',
+        routes => $api_routes,
+        es_host => $self->config('elasticsearch_host'),
+        es_port => $self->config('elasticsearch_port'),
+      );
     }
 
-    my $api_routes = $self->config('api_routes');
-    while (my ($api_path, $es_path) = each %$api_routes) {
-        my $api = $self->routes->under($api_path => sub {
-            my ($controller) = @_;
-            my $req_path = $controller->req->url->path->to_abs_string;
-            $req_path =~ s/^$api_path/$es_path/;
-            $req_path =~ s{//}{/}g;
-            if ($req_path =~ /\.(\w+)$/) {
-                my $format = $1;
-                $req_path =~ s/\.$format$//;
-                $controller->stash(format => $format);
-            }
-            $controller->stash(es_path => $req_path);
-        });
-        $api->to(controller => 'elasticsearch');
-
-        $api->get('/*')->to(action=>'es_query');
-        $api->post('/*')->to(action=>'es_query');
-        $api->options('/*')->to(action=>'es_query');
-        $api->put('/*')->to(action=>'method_not_allowed');
-        $api->delete('/*')->to(action=>'method_not_allowed');
+    # Files in these static directories will get served directly
+    if (my $static_dirs = $self->config('static_directories')) {
+      push @{$self->static->paths}, @$static_dirs;
     }
 
+    # Files in these directories become templates
+    #e.g. exception.production.html.ep not_found.production.html.ep
+    if (my $template_dirs = $self->config('template_directories')) {
+      push @{$self->renderer->paths}, @$template_dirs;
+    }
+
+    # This plugin makes sure angularjs apps are routed correctly
+    # It makes sure index.html files are not cached.
+    # use the angularjs_html5_apps array if the app uses angularjs option $location.html5Mode(true)
+    # otherwise use the angularjs_apps array
+    $self->plugin('ReseqTrack::ElasticsearchProxy::Plugins::AngularJS',
+      angularjs_apps => $self->config('angularjs_apps'),
+      angularjs_html5_apps => $self->config('angularjs_html5_apps'),
+    );
+
+    # This is to make sure paths matching a directory serve the index.html file
+    $self->routes->get('/*whatever' => {whatever => ''} => sub {
+      my ($c) = @_;
+      return if !$c->accepts('html');
+      $c->reply->static($c->stash('whatever') . '/index.html');
+    });
+
+    # This is plugin reads a tab-delimited list of paths to redirect
+    # First column is "from", second column is "to"
+    # File is read every five minutes on a timer in case the file is updated
     if (my $redirect_file = $self->config('redirect_file')) {
         $self->plugin('ReseqTrack::ElasticsearchProxy::Plugins::Redirect', file => $redirect_file);
     }
