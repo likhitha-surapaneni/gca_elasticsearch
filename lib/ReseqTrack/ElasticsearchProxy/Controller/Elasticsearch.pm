@@ -327,15 +327,11 @@ sub _process_res_tab_chunked {
     }
 
     if ($tab_writer->is_finished) {
-      if ($tab_lines) {
-        $self->write($tab_lines => sub {
-          $self->res->headers->content_length($tab_writer->content_length);
-          return $self->finish;
-        });
-      }
-      else {
-        $self->res->headers->content_length($tab_writer->content_length);
-      }
+      $self->res->headers->content_length($tab_writer->content_length);
+      return $self->finish if !$tab_lines;
+      $self->write($tab_lines => sub {
+        return $self->finish;
+      });
       return;
     }
 
