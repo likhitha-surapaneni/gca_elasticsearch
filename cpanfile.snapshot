@@ -287,54 +287,6 @@ DISTRIBUTIONS
       IO::Socket 0
       Socket 1.97
       Test::More 0.88
-  IO-stringy-2.110
-    pathname: D/DS/DSKOLL/IO-stringy-2.110.tar.gz
-    provides:
-      IO::AtomicFile 2.110
-      IO::Clever 1.01
-      IO::InnerFile 2.110
-      IO::Lines 2.110
-      IO::Scalar 2.110
-      IO::ScalarArray 2.110
-      IO::Stringy 2.110
-      IO::Wrap 2.110
-      IO::WrapTie 2.110
-      IO::WrapTie::Master 2.110
-      IO::WrapTie::Slave 2.110
-    requirements:
-      ExtUtils::MakeMaker 0
-  JSON-2.90
-    pathname: M/MA/MAKAMAKA/JSON-2.90.tar.gz
-    provides:
-      JSON 2.90
-      JSON::Backend::PP 2.90
-      JSON::Boolean 2.90
-    requirements:
-      ExtUtils::MakeMaker 0
-      Test::More 0
-  JSON-Streaming-Reader-0.06
-    pathname: M/MA/MART/JSON-Streaming-Reader-0.06.tar.gz
-    provides:
-      JSON::Streaming::Reader 0.06
-      JSON::Streaming::Reader::EventWrapper undef
-      JSON::Streaming::Reader::TestUtil undef
-    requirements:
-      B 0
-      Carp 0
-      ExtUtils::MakeMaker 0
-      IO::File 0
-      IO::Scalar 0
-  JSON-Streaming-Writer-0.03
-    pathname: M/MA/MART/JSON-Streaming-Writer-0.03.tar.gz
-    provides:
-      JSON::Streaming::Writer 0.03
-      JSON::Streaming::Writer::TestUtil undef
-      JSON::Streaming::Writer::TestUtil::FakeHandle undef
-    requirements:
-      B 0
-      Carp 0
-      ExtUtils::MakeMaker 0
-      IO::File 0
   List-MoreUtils-0.410
     pathname: R/RE/REHSACK/List-MoreUtils-0.410.tar.gz
     provides:
@@ -592,14 +544,6 @@ DISTRIBUTIONS
       ExtUtils::MakeMaker 6.30
       Mojo::Base 0
       Mojolicious 0
-  Mojolicious-Plugin-Directory-0.11
-    pathname: H/HA/HAYAJO/Mojolicious-Plugin-Directory-0.11.tar.gz
-    provides:
-      Mojolicious::Plugin::Directory 0.11
-    requirements:
-      Module::Build 0.38
-      Mojolicious 4.82
-      perl 5.010001
   Moose-2.1403
     pathname: E/ET/ETHER/Moose-2.1403.tar.gz
     provides:
