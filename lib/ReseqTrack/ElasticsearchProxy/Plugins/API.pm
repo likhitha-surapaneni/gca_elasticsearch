@@ -19,6 +19,8 @@ sub register {
           $controller->stash(format => $1);
         }
         $controller->stash(es_path => $req_path);
+        $controller->stash(es_host => $args->{es_host});
+        $controller->stash(es_port => $args->{es_port});
         $controller->req->url->path($req_path);
         return 1;
       }
@@ -31,10 +33,7 @@ sub register {
       return $controller->stash('es_path');
     });
 
-    my $api = $app->routes->route('/' => {
-      es_host => $args->{es_host},
-      es_port => $args->{es_port},
-    })->over('has_es_path')
+    my $api = $app->routes->route('/')->over('has_es_path')
       ->to(controller => 'elasticsearch');
 
     # Allow use of the scroll API and of our testpage plugin.
