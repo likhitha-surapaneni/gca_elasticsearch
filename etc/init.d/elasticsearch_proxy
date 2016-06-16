@@ -20,6 +20,7 @@ case $HOSTNAME in
   ('ves-pg-e5.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf;;
   ('ves-oy-e5.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf;;
 esac
+export MOJO_CONF
 
 set -e
  
@@ -27,7 +28,7 @@ case "$1" in
   start)
     echo "Starting $SCRIPT"
     cd $ES_HOME
-    MOJO_CONF=$MOJO_CONF carton exec hypnotoad $SCRIPT
+    carton exec hypnotoad $SCRIPT
     ;;
   stop)
     echo "Stopping $SCRIPT"
