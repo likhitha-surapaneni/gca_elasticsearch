@@ -12,7 +12,7 @@ sub es_search_router {
   Mojo::IOLoop->delay(sub {
     my ($delay) = @_;
     return $delay->pass if $self->req->is_finished;
-    $self->req->on(finish => $delay->begin(0,0);
+    $self->req->on(finish => $delay->begin(0,0));
   },
   sub {
     my ($delay) = @_;
