@@ -240,14 +240,14 @@ sub es_query_tab_chunked {
 
   if (! $req_body->{fields}
       || ref($req_body->{fields}) ne 'ARRAY'
-      || scalar grep {! defined $_} @{$req_body->{fields}}) {
+      || (scalar grep {! defined $_ || ref($_)} @{$req_body->{fields}})) {
       return $self->render(text => 'request body does not give "fields"', status => 400);
   }
   my $column_names = $req_body->{column_names} // $req_body->{fields};
   if (! $column_names
         || ref($column_names) ne 'ARRAY'
-        || scalar grep {! defined $_} @$column_names
-        || scalar @$column_names != scalar @{$req_body->{fields}}) {
+        || (scalar grep {! defined $_ || ref($_)} @$column_names)
+        || (scalar @$column_names != scalar @{$req_body->{fields}})) {
       return $self->render(text => '"column_names" not valid', status => 400);
   }
 
