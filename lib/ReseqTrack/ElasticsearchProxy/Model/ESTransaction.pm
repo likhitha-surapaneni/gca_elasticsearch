@@ -25,7 +25,9 @@ sub BUILD {
 
 sub new_transaction {
     my ($self) = @_;
-    my $es_url = sprintf('http://%s:%s/%s', $self->host, $self->port, $self->url_path);
+    my $path = $self->url_path;
+    $path =~ s{^/*}{};
+    my $es_url = sprintf('http://%s:%s/%s', $self->host, $self->port, $path);
     if (my $params = $self->url_params) {
         $es_url .= sprintf('?%s', $params);
     }
