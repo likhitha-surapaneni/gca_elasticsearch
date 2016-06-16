@@ -22,14 +22,14 @@ sub es_search_router {
     if (my $json = $self->req->body_params->to_hash->{json}) {
       eval { $req_body = Mojo::JSON::decode_json($json); };
       if ($@) {
-        return $self->bad_request("error parsing JSON: $@");
+        return $self->bad_request("error parsing JSON");
       }
     }
   }
   if (!$req_body && $self->req->body) {
-    eval { $req_body = $self->req->json };
+    eval { $req_body = Mojo::JSON::decode_json($self->req->body); };
     if ($@) {
-      return $self->render(text => "error parsing JSON: $@", status => 400);
+      return $self->bad_request("error parsing JSON");
     }
   }
 
