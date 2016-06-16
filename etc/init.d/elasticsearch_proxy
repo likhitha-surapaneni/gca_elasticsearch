@@ -12,13 +12,22 @@
 ES_HOME=`dirname $0`/../../
 SCRIPT=$ES_HOME/scripts/elasticsearch_proxy/elasticsearch_proxy.pl
 
+case $HOSTNAME in
+  ('ves-hx-e6.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.igsr.conf;;
+  ('ves-pg-e6.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.igsr.conf;;
+  ('ves-oy-e6.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.igsr.conf;;
+  ('ves-hx-e5.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf;;
+  ('ves-pg-e5.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf;;
+  ('ves-oy-e5.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf;;
+esac
+
 set -e
  
 case "$1" in
   start)
     echo "Starting $SCRIPT"
     cd $ES_HOME
-    carton exec hypnotoad $SCRIPT
+    MOJO_CONF=$MOJO_CONF carton exec hypnotoad $SCRIPT
     ;;
   stop)
     echo "Stopping $SCRIPT"

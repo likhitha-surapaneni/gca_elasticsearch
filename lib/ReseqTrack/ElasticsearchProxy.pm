@@ -4,7 +4,7 @@ use Mojo::Base 'Mojolicious';
 sub startup {
     my ($self) = @_;
 
-    $self->plugin('Config', file => $self->home->rel_file('config/elasticsearchproxy.conf'));
+    $self->plugin('Config', file => $self->home->rel_file($ENV{MOJO_CONF} || 'config/elasticsearchproxy.conf'));
 
     if (my $log_file = $self->config('log_file')) {
       $self->log->path($log_file);
