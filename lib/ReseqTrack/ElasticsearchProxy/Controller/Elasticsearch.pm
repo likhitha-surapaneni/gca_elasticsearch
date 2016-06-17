@@ -62,10 +62,11 @@ sub es_search_router {
   return $self->es_query_direct() if !$req_body;
 
   $req_body->{size} //= 10;
+  $self->stash(req_size => $req_body->{size});
 
   # used chunked searching for any large request, hits size > 100
-  return $self->es_query_json_chunked(req_body => $req_body) if $req_body->{size} > 100;
-  return $self->es_query_json_chunked(req_body => $req_body) if $req_body->{size} < 0;
+  return $self->es_count_then_search(req_body => $req_body) if $req_body->{size} > 100;
+  return $self->es_count_then_search(req_body => $req_body) if $req_body->{size} < 0;
 
   # use regular search for anything with hits size <100
   return $self->es_query_direct(req_body => $req_body);
@@ -77,6 +78,55 @@ sub es_search_router {
 
 }
 
+sub es_count_then_search {
+  my ($self, %options) = @_;
+  my $req_body = $options{req_body} or die "this method requires a req_body";
+  delete $req_body->{size};
+
+  my $path = $self->stash('es_path');
+  $path =~ s{/_search}{/_count} or die "error parsing es_path";
+
+  my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
+      port => $self->stash('es_port'),
+      host => $self->stash('es_host'),
+      method => $self->req->method,
+      url_path => $path,
+      url_params => $self->req->url->query->to_string,
+  );
+  $es_transaction->set_body(Mojo::JSON::encode_json($req_body)) if scalar keys %$req_body;
+  $es_transaction->set_headers($self->req->headers);
+
+  Mojo::IOLoop->delay(sub {
+    my ($delay) = @_;
+    $es_transaction->finished_res_callback($delay->begin);
+    $es_transaction->non_blocking_start;
+  },
+  sub {
+    my ($delay) = @_;
+    my $es_res = $es_transaction->transaction->res;
+    if (!$es_res->code) {
+      return $self->render(json => {error => 'elasticsearch connect error'}, status => 500);
+    }
+    elsif ($es_res->code != 200) {
+      return $self->render(json => {error => $es_res->body}, status => $es_res->code);
+    }
+    my $count = $es_res->json('/count');
+    die "error getting count" if ! defined $count or ref($count);
+    if ($count > 100) {
+      $req_body->{size} = $self->stash('req_size');
+      return $self->es_query_json_chunked(req_body => $req_body) if $count > 100;
+    }
+    $req_body->{size} = $self->stash('req_size') >= 0 ? $self->stash('req_size') : $count;
+    return $self->es_query_direct(req_body => $req_body);
+
+  })->catch(sub {
+    my ($delay, $err) = @_;
+    $self->server_error($err);
+  })->wait;
+
+  $self->render_later;
+}
+
 sub es_query_direct {
   my ($self, %options) = @_;
   eval {
@@ -84,6 +134,7 @@ sub es_query_direct {
 
   my $req_body = $options{req_body} || $self->req->body;
   my $es_path = $self->stash('es_path') || die "did not get es_path";
+
 
   my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
       port => $self->stash('es_port'),
@@ -164,6 +215,7 @@ sub es_query_json_chunked {
     my $es_headers = $es_transaction->transaction->res->headers->to_hash;
     delete $es_headers->{'Content-Length'};
     $self->res->headers->from_hash($es_headers);
+    $self->res->headers->transfer_encoding('chunked');
     $self->_process_res_json_chunked($es_transaction, $json_writer, $delay);
   },
   )->catch(sub {
@@ -184,25 +236,14 @@ sub _process_res_json_chunked {
       die $es_res->message;
     }
 
-    my $more_json = eval {return $json_writer->process_json($es_res->json, 100)};
-    if ($@) {
-      die "Error processing json: $@";
-    }
+    my $more_json = $json_writer->process_json($es_res->json);
+
     if ($json_writer->is_finished) {
         $more_json //= '';
         $more_json .= $json_writer->closing_json;
-        if ($delay->data('chunked')) {
-          $self->write_chunk($more_json => sub {$self->finish});
-        }
-        else {
-          $self->res->headers->content_length($json_writer->content_length);
-          $self->write($more_json => sub {$self->finish});
-        }
+        $self->write_chunk($more_json => sub {$self->finish});
         return;
     }
-
-    $self->res->headers->transfer_encoding('chunked');
-    $delay->data(chunked => 1);
 
     $es_transaction->url_path('/_search/scroll');
     $es_transaction->new_transaction();
