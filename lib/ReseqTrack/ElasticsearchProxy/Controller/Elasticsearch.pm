@@ -164,6 +164,7 @@ sub es_query_json_chunked {
     my $es_headers = $es_transaction->transaction->res->headers->to_hash;
     delete $es_headers->{'Content-Length'};
     $self->res->headers->from_hash($es_headers);
+    $self->res->headers->transfer_encoding('chunked');
     $self->_process_res_json_chunked($es_transaction, $json_writer, $delay);
   },
   )->catch(sub {
@@ -192,11 +193,11 @@ sub _process_res_json_chunked {
         $delay->steps(sub {
           my ($delay) = @_;
           return $delay->pass if !$more_json;
-          return $self->write($more_json => $delay->begin);
+          return $self->write_chunk($more_json => $delay->begin);
         },
         sub {
           my ($delay) = @_;
-          $self->write($json_writer->closing_json => $delay->begin);
+          $self->write_chunk($json_writer->closing_json => $delay->begin);
         },
         sub {
           my ($delay) = @_;
@@ -214,7 +215,7 @@ sub _process_res_json_chunked {
       my ($delay) = @_;
       $es_transaction->finished_res_callback($delay->begin);
       $es_transaction->non_blocking_start;
-      $self->write($more_json => sub {
+      $self->write_chunk($more_json => sub {
           $es_transaction->non_blocking_start;
       });
     },
@@ -227,7 +228,7 @@ sub _process_res_json_chunked {
   if ($@) {
     $self->res->code(500);
     $self->app->log->error($@);
-    $self->write('Truncated output: server error' => sub {$self->finish});
+    $self->write_chunk('Truncated output: server error' => sub {$self->finish});
   }
 }
 
@@ -294,8 +295,9 @@ sub es_query_tab_chunked {
     my $es_headers = $es_transaction->transaction->res->headers->to_hash;
     delete $es_headers->{'Content-Length'};
     $self->res->headers->from_hash($es_headers);
+    $self->res->headers->transfer_encoding('chunked');
     $self->res->headers->content_type($tab_writer->format eq 'csv' ? 'text/csv' : 'text/tab-separated-values');
-    $self->write($tab_writer->header_lines => $delay->begin);
+    $self->write_chunk($tab_writer->header_lines => $delay->begin);
   },
   sub {
     my ($delay) = @_;
@@ -304,7 +306,7 @@ sub es_query_tab_chunked {
   )->catch(sub {
     my ($delay, $err) = @_;
     $self->res->code(500);
-    $self->write('Truncated output: server error' => sub {$self->finish});
+    $self->write_chunk('Truncated output: server error' => sub {$self->finish});
     $self->app->log->error($@);
   })->wait;
 
@@ -329,7 +331,7 @@ sub _process_res_tab_chunked {
     if ($tab_writer->is_finished) {
       $self->res->headers->content_length($tab_writer->content_length);
       return $self->finish if !$tab_lines;
-      $self->write($tab_lines => sub {
+      $self->write_chunk($tab_lines => sub {
         return $self->finish;
       });
       return;
@@ -342,7 +344,7 @@ sub _process_res_tab_chunked {
     $delay->steps( sub {
       my ($delay) = @_;
       $es_transaction->finished_res_callback($delay->begin);
-      $self->write($tab_lines => sub {
+      $self->write_chunk($tab_lines => sub {
         $es_transaction->non_blocking_start;
       });
     },
@@ -354,7 +356,7 @@ sub _process_res_tab_chunked {
   };
   if ($@) {
     $self->res->code(500);
-    $self->write('Truncated output: server error' => sub {$self->finish});
+    $self->write_chunk('Truncated output: server error' => sub {$self->finish});
     $self->app->log->error($@);
   }
 }
