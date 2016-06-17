@@ -83,6 +83,11 @@ sub es_count_then_search {
   my $req_body = $options{req_body} or die "this method requires a req_body";
   delete $req_body->{size};
 
+  my %removed_keys;
+  foreach my $key (qw(sort fields)) {
+    $removed_keys{$key} = delete $req_body->{$key};
+  }
+
   my $path = $self->stash('es_path');
   $path =~ s{/_search}{/_count} or die "error parsing es_path";
 
@@ -111,6 +116,10 @@ sub es_count_then_search {
       return $self->render(json => {error => $es_res->body}, status => $es_res->code);
     }
     my $count = $es_res->json('/count');
+    while (my ($key, $val) = each %removed_keys) {
+      next if ! defined $val;
+      $req_body->{$key} = $val;
+    }
     die "error getting count" if ! defined $count or ref($count);
     if ($count > 100) {
       $req_body->{size} = $self->stash('req_size');
