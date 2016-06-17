@@ -17,7 +17,7 @@ has '_num_hits_written' => (is => 'rw', isa => 'Int', default => 0);
 
 
 sub process_json {
-    my ($self, $json_obj) = @_;
+    my ($self, $json_obj, $expected_size) = @_;
 
     my $num_hits_written = $self->_num_hits_written;
     my $num_hits_req = $self->num_hits_req;
@@ -53,7 +53,7 @@ sub process_json {
       }
     };
 
-    if (!$new_hits_written) {
+    if (!$new_hits_written || ($expected_size && $new_hits_written < $expected_size)) {
       $self->is_finished(1);
     }
 
