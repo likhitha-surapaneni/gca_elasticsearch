@@ -64,8 +64,8 @@ sub es_search_router {
   $req_body->{size} //= 10;
 
   # used chunked searching for any large request, hits size > 100
-  return $self->es_query_json_chunked(req_body => $req_body) if $req_body->{size} > 100;
-  return $self->es_query_json_chunked(req_body => $req_body) if $req_body->{size} < 0;
+  return $self->es_count_then_search(req_body => $req_body) if $req_body->{size} > 100;
+  return $self->es_count_then_search(req_body => $req_body) if $req_body->{size} < 0;
 
   # use regular search for anything with hits size <100
   return $self->es_query_direct(req_body => $req_body);
@@ -75,6 +75,50 @@ sub es_search_router {
     $self->server_error($err);
   })->wait;
 
+}
+
+sub es_count_then_search {
+  my ($self, %options) = @_;
+  my $req_body = $options{req_body} or die "this method requires a req_body";
+
+  my $path = $self->stash('es_path');
+  $path =~ s{/_search}{/_count} or die "error parsing es_path";
+
+  my $es_transaction = ReseqTrack::ElasticsearchProxy::Model::ESTransaction->new(
+      port => $self->stash('es_port'),
+      host => $self->stash('es_host'),
+      method => $self->req->method,
+      url_path => $path,
+      url_params => $self->req->url->query->to_string,
+  );
+  $es_transaction->set_body(Mojo::JSON::encode_json($req_body));
+  $es_transaction->set_headers($self->req->headers);
+
+  Mojo::IOLoop->delay(sub {
+    my ($delay) = @_;
+    $es_transaction->finished_res_callback($delay->begin);
+    $es_transaction->non_blocking_start;
+  },
+  sub {
+    my ($delay) = @_;
+    my $es_res = $es_transaction->transaction->res;
+    if (!$es_res->code) {
+      return $self->render(json => {error => 'elasticsearch connect error'}, status => 500);
+    }
+    elsif ($es_res->code != 200) {
+      return $self->render(json => {error => $es_res->message}, status => $es_res->code);
+    }
+    my $count = $es_res->json('/count');
+    die "error getting count" if ! defined $count or ref($count);
+    return $self->es_query_json_chunked(req_body => $req_body) if $count > 100;
+    return $self->es_query_direct(req_body => $req_body);
+
+  })->catch(sub {
+    my ($delay, $err) = @_;
+    $self->server_error($err);
+  })->wait;
+
+  $self->render_later;
 }
 
 sub es_query_direct {
