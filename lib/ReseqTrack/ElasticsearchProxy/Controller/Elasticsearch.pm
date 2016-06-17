@@ -164,7 +164,6 @@ sub es_query_json_chunked {
     my $es_headers = $es_transaction->transaction->res->headers->to_hash;
     delete $es_headers->{'Content-Length'};
     $self->res->headers->from_hash($es_headers);
-    $self->res->headers->transfer_encoding('chunked');
     $self->_process_res_json_chunked($es_transaction, $json_writer, $delay);
   },
   )->catch(sub {
@@ -185,27 +184,25 @@ sub _process_res_json_chunked {
       die $es_res->message;
     }
 
-    my $more_json = eval {return $json_writer->process_json($es_res->json)};
+    my $more_json = eval {return $json_writer->process_json($es_res->json, 100)};
     if ($@) {
       die "Error processing json: $@";
     }
     if ($json_writer->is_finished) {
-        $delay->steps(sub {
-          my ($delay) = @_;
-          return $delay->pass if !$more_json;
-          return $self->write_chunk($more_json => $delay->begin);
-        },
-        sub {
-          my ($delay) = @_;
-          $self->write_chunk($json_writer->closing_json => $delay->begin);
-        },
-        sub {
-          my ($delay) = @_;
+        $more_json //= '';
+        $more_json .= $json_writer->closing_json;
+        if ($delay->data('chunked')) {
+          $self->write_chunk($more_json => sub {$self->finish});
+        }
+        else {
           $self->res->headers->content_length($json_writer->content_length);
-          return $self->finish;
-        })->wait;
+          $self->write($more_json => sub {$self->finish});
+        }
         return;
     }
+
+    $self->res->headers->transfer_encoding('chunked');
+    $delay->data(chunked => 1);
 
     $es_transaction->url_path('/_search/scroll');
     $es_transaction->new_transaction();
@@ -295,12 +292,7 @@ sub es_query_tab_chunked {
     my $es_headers = $es_transaction->transaction->res->headers->to_hash;
     delete $es_headers->{'Content-Length'};
     $self->res->headers->from_hash($es_headers);
-    $self->res->headers->transfer_encoding('chunked');
     $self->res->headers->content_type($tab_writer->format eq 'csv' ? 'text/csv' : 'text/tab-separated-values');
-    $self->write_chunk($tab_writer->header_lines => $delay->begin);
-  },
-  sub {
-    my ($delay) = @_;
     $self->_process_res_tab_chunked($es_transaction, $tab_writer, $delay);
   }
   )->catch(sub {
@@ -323,25 +315,38 @@ sub _process_res_tab_chunked {
       die $es_res->message;
     }
 
-    my $tab_lines = eval {return $tab_writer->process_json($es_res->json)};
+    my $tab_lines = eval {return $tab_writer->process_json($es_res->json, 100)};
     if ($@) {
       die "Error converting json to delimited text: $@";
     }
 
     if ($tab_writer->is_finished) {
-      $self->res->headers->content_length($tab_writer->content_length);
-      return $self->finish if !$tab_lines;
-      $self->write_chunk($tab_lines => sub {
-        return $self->finish;
-      });
+      if ($delay->data('chunked')) {
+        return $self->finish if !$tab_lines;
+        $self->write_chunk($tab_lines => sub {
+          return $self->finish;
+        });
+      }
+      else {
+        $self->res->headers->content_length($tab_writer->content_length);
+        $self->write($tab_writer->header_lines . ($tab_lines // '') => sub {$self->finish});
+      }
       return;
     }
+
 
     $es_transaction->url_path('/_search/scroll');
     $es_transaction->new_transaction();
     $es_transaction->set_body($tab_writer->scroll_id);
 
     $delay->steps( sub {
+      my ($delay) = @_;
+      return $delay->pass if $delay->data('chunked');
+      $self->res->headers->transfer_encoding('chunked');
+      $delay->data(chunked => 1);
+      $self->write_chunk($tab_writer->header_lines => $delay->begin);
+    },
+    sub {
       my ($delay) = @_;
       $es_transaction->finished_res_callback($delay->begin);
       $self->write_chunk($tab_lines => sub {

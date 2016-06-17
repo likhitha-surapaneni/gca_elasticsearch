@@ -26,7 +26,7 @@ sub BUILD {
 
 
 sub process_json {
-    my ($self, $json_obj) = @_;
+    my ($self, $json_obj, $expected_size) = @_;
 
     my $sep = fc($self->format) eq fc('csv') ? ',' : "\t";
     my $sub_separator = fc($self->format) eq 'csv' ? ';' : ",";
@@ -49,7 +49,8 @@ sub process_json {
         }
     }
 
-    if (! scalar @{$json_obj->{hits}{hits}}) {
+    my $num_returned_hits = scalar @{$json_obj->{hits}{hits}};
+    if (! $num_returned_hits || ($expected_size && $num_returned_hits < $expected_size)) {
         $self->is_finished(1);
     }
 
