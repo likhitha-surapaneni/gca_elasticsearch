@@ -8,6 +8,15 @@
 # Short-Description: Starts elasticsearch
 # Description:      Starts elasticsearch using start-stop-daemon
 ### END INIT INFO
+
+case $DATACENTRE in
+  ('hx')
+    PROJECT_HOME=/nfs/public/rw/reseq-info/elastic_search_staging
+    ;;
+  *)
+    PROJECT_HOME=/nfs/public/rw/reseq-info/elastic_search
+    ;;
+esac
  
 ES_HOME=/nfs/public/rw/homes/reseq_adm/elasticsearch/elasticsearch-1.5.1/
 ES_HEAP_SIZE=2g
@@ -15,14 +24,14 @@ DAEMON=$ES_HOME/bin/elasticsearch
 NAME=gca_elasticsearch_${DATACENTRE}
 DESC=gca_elasticsearch_${DATACENTRE}
 PID_FILE=/mnt/data/var/run/$NAME.pid
-LOG_DIR=/nfs/public/rw/reseq-info/elastic_search/var/log/$HOSTNAME
+LOG_DIR=$PROJECT_HOME/var/log/$HOSTNAME
 DATA_DIR=/mnt/data/var/lib/
 WORK_DIR=/mnt/data/tmp/$NAME
 TEMP_DIR=/mnt/data/tmp/$NAME
-CONF_DIR=/nfs/public/rw/reseq-info/elastic_search/gca_elasticsearch/config/
 CLUSTER_NAME=$NAME
 NODE_NAME=$HOSTNAME
 CONFIG_FILE=$CONF_DIR/elasticsearch.yml
+CONF_DIR=$PROJECT_HOME/gca_elasticsearch/config/
 DAEMON_OPTS="-d -p $PID_FILE -Des.config=$CONFIG_FILE -Des.path.conf=$CONF_DIR -Des.path.home=$ES_HOME -Des.path.logs=$LOG_DIR -Des.path.data=$DATA_DIR -Des.path.work=$WORK_DIR -Des.node.name=$NODE_NAME -Des.cluster.name=$CLUSTER_NAME -Djna.tmpdir=$TEMP_DIR"
 
 test -x $DAEMON || exit 0

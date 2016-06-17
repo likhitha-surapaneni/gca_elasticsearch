@@ -13,14 +13,34 @@ ES_HOME=`dirname $0`/../../
 SCRIPT=$ES_HOME/scripts/elasticsearch_proxy/elasticsearch_proxy.pl
 
 case $HOSTNAME in
-  ('ves-hx-e6.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.igsr.conf;;
-  ('ves-pg-e6.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.igsr.conf;;
-  ('ves-oy-e6.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.igsr.conf;;
-  ('ves-hx-e5.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf;;
-  ('ves-pg-e5.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf;;
-  ('ves-oy-e5.ebi.ac.uk') MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf;;
+  ('ves-hx-e6.ebi.ac.uk')
+    MOJO_CONF=$ES_HOME/config/elasticsearchproxy.igsr.conf
+    PROJECT_HOME=/nfs/public/rw/reseq-info/igsr_website_staging
+    ;;
+  ('ves-pg-e6.ebi.ac.uk')
+    MOJO_CONF=$ES_HOME/config/elasticsearchproxy.igsr.conf
+    PROJECT_HOME=/nfs/public/rw/reseq-info/igsr_website
+    ;;
+  ('ves-oy-e6.ebi.ac.uk')
+    MOJO_CONF=$ES_HOME/config/elasticsearchproxy.igsr.conf
+    PROJECT_HOME=/nfs/public/rw/reseq-info/igsr_website
+    ;;
+  ('ves-hx-e5.ebi.ac.uk')
+    MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf
+    PROJECT_HOME=/nfs/public/rw/reseq-info/hipsci_portal_staging
+    ;;
+  ('ves-pg-e5.ebi.ac.uk')
+    MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf
+    PROJECT_HOME=/nfs/public/rw/reseq-info/hipsci_portal
+    ;;
+  ('ves-oy-e5.ebi.ac.uk')
+    MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf
+    PROJECT_HOME=/nfs/public/rw/reseq-info/hipsci_portal
+    ;;
 esac
 export MOJO_CONF
+export PROJECT_HOME
+
 
 set -e
  
@@ -32,6 +52,7 @@ case "$1" in
     ;;
   stop)
     echo "Stopping $SCRIPT"
+    cd $ES_HOME
     carton exec hypnotoad --stop $SCRIPT
     ;;
   restart|force-reload)
