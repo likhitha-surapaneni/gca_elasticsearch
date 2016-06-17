@@ -183,26 +183,25 @@ sub _process_res_json_chunked {
     if (!$es_res->code || $es_res->code !=200) {
       die $es_res->message;
     }
+    my $res_decoded = $es_res->json;
 
-    my $more_json = eval {return $json_writer->process_json($es_res->json, 100)};
-    if ($@) {
-      die "Error processing json: $@";
-    }
-    if ($json_writer->is_finished) {
-        $more_json //= '';
-        $more_json .= $json_writer->closing_json;
-        if ($delay->data('chunked')) {
-          $self->write_chunk($more_json => sub {$self->finish});
-        }
-        else {
-          $self->res->headers->content_length($json_writer->content_length);
-          $self->write($more_json => sub {$self->finish});
-        }
+    if (! $delay->data('chunked') && $es_res->{hits}{total} <= 100) {
+        delete $res_decoded->{scroll_id};
+        $self->render(json => $res_decoded);
         return;
     }
 
     $self->res->headers->transfer_encoding('chunked');
     $delay->data(chunked => 1);
+
+    my $more_json = $json_writer->process_json($res_decoded);
+
+    if ($json_writer->is_finished) {
+        $more_json //= '';
+        $more_json .= $json_writer->closing_json;
+        $self->write_chunk($more_json => sub {$self->finish});
+        return;
+    }
 
     $es_transaction->url_path('/_search/scroll');
     $es_transaction->new_transaction();
