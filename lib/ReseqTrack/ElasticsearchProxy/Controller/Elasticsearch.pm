@@ -17,6 +17,8 @@ sub es_search_router {
   sub {
     my ($delay) = @_;
 
+  return $self->es_query_direct if $self->req->method eq 'OPTIONS';
+
   my $req_body;
   if ($self->req->headers->content_type eq 'application/x-www-form-urlencoded') {
     if (my $json = $self->req->body_params->to_hash->{json}) {
