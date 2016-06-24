@@ -169,8 +169,9 @@ sub es_query_direct {
   $es_transaction->finished_callback( sub {
     my ($ua, $tx) = @_;
     if (!$tx->res->code) {
-      $self->render(json => {error => 'elasticsearch connect error'}, status => 500);
+      return $self->render(json => {error => 'elasticsearch connect error'}, status => 500);
     }
+    $self->rendered;
   });
 
   $req_body = ref($req_body) eq 'HASH' ? Mojo::JSON::encode_json($req_body) : $req_body;
