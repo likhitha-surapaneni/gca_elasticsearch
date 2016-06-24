@@ -39,7 +39,7 @@ sub register {
     # Allow use of the scroll API and of our testpage plugin.
     # ...but disallow anything else starting with '_'
     $api->get('/_plugin/testpage')->to(action => 'es_query_direct');
-    $api->any(['GET', 'POST'] => '/_search/scroll')->to(action => 'es_query_direct');
+    $api->any(['GET', 'POST', 'OPTIONS'] => '/_search/scroll')->to(action => 'es_query_direct');
     $api->any('/_*whatever' => {whatever => ''})->to(action => 'method_not_allowed');
 
     # Allow the _mapping API e.g. /hipsci/_mapping/donor
@@ -48,12 +48,12 @@ sub register {
     $api->any('/:index/_*whatever' => {whatever => ''})->to(action => 'method_not_allowed');
 
     # allow _search, but let the search router work out how to handle it
-    $api->any(['GET', 'POST'] => '/:index/:type/_search/*whatever' => {whatever => ''})->to(action => 'es_search_router');
+    $api->any(['GET', 'POST', 'OPTIONS'] => '/:index/:type/_search/*whatever' => {whatever => ''})->to(action => 'es_search_router');
 
     # allow _count and _validate APIs
     # ...but disallow aything else with an underscore in 3rd position
-    $api->any(['GET', 'POST'] => '/:index/:type/_count/*whatever' => {whatever => ''})->to(action => 'es_query_direct');
-    $api->any(['GET', 'POST'] => '/:index/:type/_validate/*whatever' => {whatever => ''})->to(action => 'es_query_direct');
+    $api->any(['GET', 'POST', 'OPTIONS'] => '/:index/:type/_count/*whatever' => {whatever => ''})->to(action => 'es_query_direct');
+    $api->any(['GET', 'POST', 'OPTIONS'] => '/:index/:type/_validate/*whatever' => {whatever => ''})->to(action => 'es_query_direct');
     $api->any('/:index/:type/_*whatever' => {whatever => ''})->to(action => 'method_not_allowed');
 
     # allow _count and _validate APIs
@@ -62,7 +62,7 @@ sub register {
     $api->any('/:index/:type/:id/_*whatever' => {whatever => ''})->to(action => 'method_not_allowed');
 
     # all other paths are safe e.g. /hipsci/donor/name
-    $api->any(['GET', 'POST'] => '/:index/:type/:name/*whatever' => {whatever => ''})->to(action => 'es_query_direct');
+    $api->any(['GET', 'POST', 'OPTIONS'] => '/:index/:type/:name/*whatever' => {whatever => ''})->to(action => 'es_query_direct');
     $api->any('/*whatever' => {whatever => ''})->to(action => 'method_not_allowed');
 
 }
