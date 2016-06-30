@@ -20,7 +20,7 @@ my @restore_indices;
   'repo=s' =>\$repo,
   'snap_index=s' =>\@snap_indices,
   'restore_only=s' =>\@restore_indices,
-  'restore!' => $restore,
+  'restore!' => \$restore,
 );
 
 die 'requires --repo on command line' if !$repo;
@@ -89,8 +89,6 @@ while( my ($to_es_host, $es) = each %es_to) {
       die "error getting index alias for $restore_index: ".$error->{text};
     }
     my @existing_aliases = grep {exists $get_alias_res->{$_}->{aliases}{$restore_index}} keys %$get_alias_res;
-    die "unexpected number of existing aliases @existing_aliases" if scalar @existing_aliases != 1;
-    my $old_index_name = $existing_aliases[0];
 
     my $new_index_name = sprintf('%s_%s', $restore_index, $datestamp);
     eval{$es->snapshot->restore(
@@ -112,19 +110,21 @@ while( my ($to_es_host, $es) = each %es_to) {
       body => {
         actions => [
           {add => {alias => $restore_index, index => $new_index_name}},
-          {remove => {alias => $restore_index, index => $old_index_name}},
+          map { {remove => {alias => $restore_index, index => $_}} } @existing_aliases
         ]
       }
     );};
     if (my $error = $@) {
-      die "error changing alias from $old_index_name to $new_index_name for index $restore_index: ".$error->{text};
+      die "error changing alias from @existing_aliases to $new_index_name for index $restore_index: ".$error->{text};
     }
 
-    eval{$es->indices->delete(
-      index => $old_index_name,
-    );};
-    if (my $error = $@) {
-      die "error deleting old index $old_index_name: ".$error->{text};
+    if (@existing_aliases) {
+      eval{$es->indices->delete(
+        index => join(',', @existing_aliases),
+      );};
+      if (my $error = $@) {
+        die "error deleting old index @existing_aliases: ".$error->{text};
+      }
     }
 
   }
