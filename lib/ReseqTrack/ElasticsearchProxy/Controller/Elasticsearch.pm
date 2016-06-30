@@ -86,7 +86,7 @@ sub es_count_then_search {
   delete $req_body->{size};
 
   my %removed_keys;
-  foreach my $key (qw(sort fields _source)) {
+  foreach my $key (qw(sort fields _source from size)) {
     $removed_keys{$key} = delete $req_body->{$key};
   }
 
