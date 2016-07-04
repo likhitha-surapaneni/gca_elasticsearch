@@ -52,12 +52,21 @@ my $repo_dir = $repo_res->{$repo}{settings}{location} || die "did not get repo d
 $repo_dir .= '/'; # important for rsync
 $repo_dir =~ s{//}{/}g;
 
+my %full_index_names;
+foreach my $index_name (@snap_indices) {
+  my $index_status = eval{return $es_from->indices->get(index => $index_name);};
+  if (my $error = $@) {
+    die "error getting index status for $index_name: ".$error->{text};
+  }
+  $full_index_names{$index_name} = [keys %$index_status];
+}
+
 eval{$es_from->snapshot->create(
     repository => $repo,
     snapshot => $snapshot_name,
     wait_for_completion => 1,
     body => {
-        indices => join(',', @snap_indices),
+        indices => join(',', map {@$_} values %full_index_names),
         include_global_state => 0,
     }
 );};
@@ -81,7 +90,9 @@ while( my ($to_es_host, $es) = each %es_to) {
 
   next ES_TO if !$restore;
 
+  RESTORE:
   foreach my $restore_index (@restore_indices) {
+    next RESTORE if !$full_index_names{$restore_index}; # Do not try to restore an index if we have not synced it.
     my $get_alias_res = eval{return $es->indices->get_alias(
       index => $restore_index,
     );};
@@ -90,32 +101,37 @@ while( my ($to_es_host, $es) = each %es_to) {
     }
     my @existing_aliases = grep {exists $get_alias_res->{$_}->{aliases}{$restore_index}} keys %$get_alias_res;
 
-    my $new_index_name = sprintf('%s_%s', $restore_index, $datestamp);
-    eval{$es->snapshot->restore(
-      repository => $repo,
-      snapshot => $snapshot_name,
-      wait_for_completion => 1,
-      body => {
-          indices => $restore_index,
-          include_global_state => 0,
-          rename_pattern => $restore_index,
-          rename_replacement => $new_index_name,
+    my @new_index_names;
+    foreach my $full_index_name (@{$full_index_names{$restore_index}}) {
+      my $new_index_name = sprintf('%s_%s', $full_index_name, $datestamp);
+      eval{$es->snapshot->restore(
+        repository => $repo,
+        snapshot => $snapshot_name,
+        wait_for_completion => 1,
+        body => {
+            indices => $full_index_name,
+            include_global_state => 0,
+            rename_pattern => $full_index_name,
+            rename_replacement => $new_index_name,
+            include_aliases => 0,
+        }
+      );};
+      if (my $error = $@) {
+        die "error restoring snapshot $snapshot_name from $repo for $restore_index: ".$error->{text};
       }
-    );};
-    if (my $error = $@) {
-      die "error restoring snapshot $snapshot_name from $repo for $restore_index: ".$error->{text};
+      push(@new_index_names, $new_index_name);
     }
 
     eval{$es->indices->update_aliases(
       body => {
         actions => [
-          {add => {alias => $restore_index, index => $new_index_name}},
-          map { {remove => {alias => $restore_index, index => $_}} } @existing_aliases
+          (map { {add => {alias => $restore_index, index => $_}} } @new_index_names),
+          (map { {remove => {alias => $restore_index, index => $_}} } @existing_aliases)
         ]
       }
     );};
     if (my $error = $@) {
-      die "error changing alias from @existing_aliases to $new_index_name for index $restore_index: ".$error->{text};
+      die "error changing alias from @existing_aliases to @new_index_names for index $restore_index: ".$error->{text};
     }
 
     if (@existing_aliases) {
