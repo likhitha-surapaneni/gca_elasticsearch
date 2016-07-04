@@ -52,23 +52,12 @@ my $repo_dir = $repo_res->{$repo}{settings}{location} || die "did not get repo d
 $repo_dir .= '/'; # important for rsync
 $repo_dir =~ s{//}{/}g;
 
-my %alias_indices;
-foreach my $index_or_alias_name (@snap_indices) {
-  my $index_hash = eval{return $es_from->indices->get(index => $index_or_alias_name);};
-  if (my $error = $@) {
-    die "error getting index details for $index_or_alias_name ".$error->{text};
-  }
-  foreach my $index_name (keys %$index_hash) {
-    $alias_indices{$index_or_alias_name}{$index_name} = 1;
-  }
-}
-
 eval{$es_from->snapshot->create(
     repository => $repo,
     snapshot => $snapshot_name,
     wait_for_completion => 1,
     body => {
-        indices => join(',', map {keys %$_} values %alias_indices),
+        indices => join(',', @snap_indices),
         include_global_state => 0,
     }
 );};
@@ -92,41 +81,51 @@ while( my ($to_es_host, $es) = each %es_to) {
 
   next ES_TO if !$restore;
 
-  RESTORE:
   foreach my $restore_index (@restore_indices) {
-    next RESTORE if !$alias_indices{$restore_index}; # Don't restore an index if we have not synced it.
+    my $get_alias_res = eval{return $es->indices->get_alias(
+      index => $restore_index,
+    );};
+    if (my $error = $@) {
+      die "error getting index alias for $restore_index: ".$error->{text};
+    }
+    my @existing_aliases = grep {exists $get_alias_res->{$_}->{aliases}{$restore_index}} keys %$get_alias_res;
+
+    my $new_index_name = sprintf('%s_%s', $restore_index, $datestamp);
     eval{$es->snapshot->restore(
       repository => $repo,
       snapshot => $snapshot_name,
       wait_for_completion => 1,
       body => {
-          indices => join(',', @{$alias_indices{$restore_index}}),
+          indices => $restore_index,
           include_global_state => 0,
+          rename_pattern => $restore_index,
+          rename_replacement => $new_index_name,
       }
     );};
     if (my $error = $@) {
       die "error restoring snapshot $snapshot_name from $repo for $restore_index: ".$error->{text};
     }
 
-    my $index_hash = eval{return $es_from->indices->get(index => $restore_index);};
-    if (my $error = $@) {
-      die "error getting index details for $restore_index ".$error->{text};
-    }
-
-    my @remove_aliases = grep {!$alias_indices{$restore_index}{$_}} keys %$index_hash;
-    next RESTORE if ! scalar @remove_aliases;
-
     eval{$es->indices->update_aliases(
       body => {
         actions => [
-          map { {remove => {alias => $restore_index, index => $_}} } @remove_aliases
+          {add => {alias => $restore_index, index => $new_index_name}},
+          map { {remove => {alias => $restore_index, index => $_}} } @existing_aliases
         ]
       }
     );};
     if (my $error = $@) {
-      die "error removing aliases @remove_aliases for index $restore_index: ".$error->{text};
+      die "error changing alias from @existing_aliases to $new_index_name for index $restore_index: ".$error->{text};
     }
 
+    if (@existing_aliases) {
+      eval{$es->indices->delete(
+        index => join(',', @existing_aliases),
+      );};
+      if (my $error = $@) {
+        die "error deleting old index @existing_aliases: ".$error->{text};
+      }
+    }
 
   }
 
