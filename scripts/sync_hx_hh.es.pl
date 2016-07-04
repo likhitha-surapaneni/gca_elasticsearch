@@ -100,7 +100,7 @@ while( my ($to_es_host, $es) = each %es_to) {
       snapshot => $snapshot_name,
       wait_for_completion => 1,
       body => {
-          indices => join(',', @{$alias_indices{$restore_index}}),
+          indices => join(',', keys %{$alias_indices{$restore_index}}),
           include_global_state => 0,
       }
     );};
