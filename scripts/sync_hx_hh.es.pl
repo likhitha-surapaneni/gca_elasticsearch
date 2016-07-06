@@ -103,7 +103,7 @@ while( my ($to_es_host, $es) = each %es_to) {
 
     my @new_index_names;
     foreach my $full_index_name (@{$full_index_names{$restore_index}}) {
-      my $new_index_name = sprintf('%s_%s', $full_index_name, $datestamp);
+      my $new_index_name = sprintf('%s_%s', $restore_index, $datestamp);
       eval{$es->snapshot->restore(
         repository => $repo,
         snapshot => $snapshot_name,
@@ -146,3 +146,129 @@ while( my ($to_es_host, $es) = each %es_to) {
   }
 
 }
+
+=pod
+
+=head1 NAME
+
+gca_elasticsearch/scripts/sync_hx_hh.es.pl
+
+=head1 SYNOPSIS
+
+perl gca_elasticsearch/scripts/sync_hx_hh.es.pl --repo hipsci_repo --snap_index hipsci
+
+=over
+
+=item 1.
+
+Takes a snapshot of your index on your staging server
+
+=item 2.
+
+Uses rsync to copy the snapshot to your production server
+
+=item 3.
+
+Restores the index on the production server with a new name
+
+=item 4.
+
+Changes alias names on the production server to point to the newly restored index
+
+=back
+
+=head1 DESCRIPTION
+
+We have 3 running elasticsearch instances: Hinxton staging (hx), Hemel production (pg), Hinxton fallback (oy)
+
+The production servers should be responsible for serving data only; they should not be used for building the index.
+Therefore, we BUILD indices for a project on the Hinxton staging server.
+Then we take a snapshot to disk in Hinxton every night so we have full backups of what had been built.
+Next, we rsync the snapshot to pg/oy, and restore the index in pg/oy, so all three servers are serving the same content to users.
+
+This script requires that indexes on the production servers uses alias names.
+For example, "hipsci" should be an alias pointing to the index "hipsci_20160706"
+
+See L</SETUP> to get your elasticsearch index set up properly.
+
+=head1 OPTIONS
+
+=over 12
+
+=item -from_es_host
+
+The name of the staging server in which you have built your index: default is ves-hx-e4
+
+=item -to_es_host
+
+Name of the production servers which you sync TO: defaults to ves-oy-e4, ves-pg-e4
+
+=item -repo
+
+Name of the repository to use for snapshotting and rsyncing.
+See L<elasticsearch documentation|https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-snapshots.html> for details on how to set up a repository in elasticsearch
+
+=item -snap_index
+
+Name of any index which should be snapshotted. I suggest let each project snapshot its own indexes
+e.g. -snap_index igsr -snap_index igsr_beta
+
+=item -restore
+
+Boolean, default 1. Tells the script to restore the index on production servers.
+Type --norestore if you want to snapshot in Hinxton but without rsyncing and restoring on the production servers
+
+=item -restore_only
+
+Use this option if you want to snapshot multiple indexes but only restore some of them
+e.g. -snap_index igsr -snap_index igsr_beta -restore -restore_only igsr
+
+=back
+
+=head1 SETUP
+
+Steps to be taken before you use this script:
+
+=over 4
+
+=item 1. Create a new index on the staging server
+
+The index name should not be the short friendly name, e.g. use "hipsci_build1"
+
+curl -XPUT http://ves-hx-e3:9200/hipsci_build1
+
+=item 2. Create a alias
+
+L<An alias|https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-aliases.html>
+makes your index available under the shorter friendlier name, e.g. "hipsci"
+
+curl -XPOST http://ves-hx-e3:9200/_aliases -d '{"actions":[{"add":{"index":"hipsci_20160706","alias:"hipsci"}}]}'
+
+=item 3. Build the index
+
+Update index settings, using the L<Elasticsearch documentation|https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-update-settings.html>
+
+Load mappings to tell elasticsearch how to store each field you give it.
+Use the L<Elasticsearch documentation to help you|https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-put-mapping.html>
+
+Load your documents. Your project should have its own scripts for loading documents from the project's data to meet the project's requirements.
+Use the L<Elasticsearch documentation to help you|https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html>
+
+=item 4. Create a snapshot repo on the staging server
+
+curl -XPUT http://ves-hx-e3:9200/_snapshot/hipsci_repo/ -d '{"type":"fs","settings":{"location":"/path/to/staging/disk"}}'
+
+The /path/to/staging/disk should be read-write accessible to the unix user running elasticsearch (w3_vg02)
+
+L<Elasticsearch documentation has more details|https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-snapshots.html>
+
+=item 5. Create a snapshot repo on each production server
+
+curl -XPUT http://ves-pg-e3:9200/_snapshot/hipsci_repo/ -d '{"type":"fs","settings":{"location":"/path/to/pg/disk","readonly":true}}'
+
+Note that readonly can be set to true, because we only write to it by rsync. The /path/to/pg/disk should be write-accessible
+to the user who runs THIS script (reseq_adm)
+
+=back
+
+=cut
