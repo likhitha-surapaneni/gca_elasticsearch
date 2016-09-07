@@ -1,4 +1,4 @@
-package ReseqTrack::ElasticsearchProxy::Plugins::AngularJS;
+package ReseqTrack::ElasticsearchProxy::Plugins::MimeTypes;
 use Mojo::Base qw{ Mojolicious::Plugin };
 
 sub register {
