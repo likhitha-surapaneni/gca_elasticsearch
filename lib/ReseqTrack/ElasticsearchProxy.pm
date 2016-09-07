@@ -60,6 +60,10 @@ sub startup {
       $c->reply->static($c->stash('whatever') . '/index.html');
     });
 
+    # This plugin makes sure microsoft files have the correct headers
+    # so they get rendered correctly by the browser
+    $self->plugin('ReseqTrack::ElasticsearchProxy::Plugins::MimeTypes');
+
 
 }
 
