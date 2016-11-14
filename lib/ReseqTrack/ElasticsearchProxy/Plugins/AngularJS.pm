@@ -19,7 +19,7 @@ sub register {
         my ($c) = @_;
         return if !$c->accepts('html');
         $c->reply->static($app_home.'index.html');
-        $c->res->headers->cache_control('max_age=1, no_cache');
+        $c->res->headers->cache_control('max-age=1, no-cache');
       });
     }
 
@@ -34,7 +34,7 @@ sub register {
           return $c->redirect_to($req_path->to_string);
         }
         $c->reply->static($app_home.'index.html');
-        $c->res->headers->cache_control('max_age=1, no_cache');
+        $c->res->headers->cache_control('max-age=1, no-cache');
       });
     }
 
@@ -42,7 +42,7 @@ sub register {
       my ($c) = @_;
       my $req_path = $c->req->url->path->to_string;
       if (grep {$req_path eq $_.'index.html'} @$angularjs_apps, @$angularjs_html5_apps) {
-        return $c->res->headers->cache_control('max_age=1, no_cache');
+        return $c->res->headers->cache_control('max-age=1, no-cache');
       }
     });
 
