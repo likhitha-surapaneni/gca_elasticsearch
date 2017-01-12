@@ -41,7 +41,7 @@ sub register {
     $app->hook(after_static => sub {
       my ($c) = @_;
       my $req_path = $c->req->url->path->to_string;
-      if (grep {$req_path eq $_.'index.html'} @$angularjs_apps, @$angularjs_html5_apps) {
+      if (grep {$req_path eq $_.'index.html' || $req_path eq $_} @$angularjs_apps, @$angularjs_html5_apps) {
         return $c->res->headers->cache_control('max-age=1, no-cache');
       }
     });
