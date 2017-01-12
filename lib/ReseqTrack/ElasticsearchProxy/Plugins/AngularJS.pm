@@ -21,6 +21,12 @@ sub register {
         $c->reply->static($app_home.'index.html');
         $c->res->headers->cache_control('max-age=1, no-cache');
       });
+      $app->routes->get($app_home => sub {
+        my ($c) = @_;
+        return if !$c->accepts('html');
+        $c->reply->static($app_home.'index.html');
+        $c->res->headers->cache_control('max-age=1, no-cache');
+      });
     }
 
     foreach my $app_home (@{$angularjs_apps}) {
@@ -41,7 +47,7 @@ sub register {
     $app->hook(after_static => sub {
       my ($c) = @_;
       my $req_path = $c->req->url->path->to_string;
-      if (grep {$req_path eq $_.'index.html' || $req_path eq $_} @$angularjs_apps, @$angularjs_html5_apps) {
+      if (grep {$req_path eq $_.'index.html' || $req_path eq $_.'/'} @$angularjs_apps, @$angularjs_html5_apps) {
         return $c->res->headers->cache_control('max-age=1, no-cache');
       }
     });
