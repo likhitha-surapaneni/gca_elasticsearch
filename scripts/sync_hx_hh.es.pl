@@ -37,9 +37,9 @@ if (! scalar @restore_indices) {
 
 my %es_to;
 foreach my $to_es_host (@to_es_host) {
-  $es_to{$to_es_host} = Search::Elasticsearch->new(nodes => "$to_es_host:9200", client => '1_0::Direct', request_timeout => 120)
+  $es_to{$to_es_host} = Search::Elasticsearch->new(nodes => "$to_es_host:9200", client => '1_0::Direct', request_timeout => 180)
 }
-my $es_from = Search::Elasticsearch->new(nodes => "$from_es_host:9200", client => '1_0::Direct', request_timeout => 120);
+my $es_from = Search::Elasticsearch->new(nodes => "$from_es_host:9200", client => '1_0::Direct', request_timeout => 180);
 
 my ($sec,$min,$hour,$day,$month,$year) = localtime();
 my $datestamp = sprintf('%04d%02d%02d_%02d%02d%02d', $year+1900, $month+1, $day, $hour, $min, $sec);
