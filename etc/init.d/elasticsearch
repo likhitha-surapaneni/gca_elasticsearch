@@ -15,6 +15,10 @@ case $DATACENTRE in
     ;;
   ('p1m')
     PROJECT_HOME=/nfs/public/rw/igsr/elastic_search_staging/
+    ;;
+  ('p2m')
+    PROJECT_HOME=/nfs/public/rw/igsr/elastic_search_staging/
+    ;;
   *)
     PROJECT_HOME=/nfs/public/rw/igsr/elastic_search
     ;;
