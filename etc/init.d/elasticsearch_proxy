@@ -13,41 +13,13 @@ ES_HOME=`dirname $0`/../../
 SCRIPT=$ES_HOME/scripts/elasticsearch_proxy/elasticsearch_proxy.pl
 
 case $HOSTNAME in
-  ('ves-oy-e9.ebi.ac.uk')
-    MOJO_CONF=$ES_HOME/config/elasticsearchproxy.faang.conf
-    PROJECT_HOME=/nfs/public/rw/reseq-info/faang_website
-    ;;
-  ('ves-pg-e9.ebi.ac.uk')
-    MOJO_CONF=$ES_HOME/config/elasticsearchproxy.faang.conf
-    PROJECT_HOME=/nfs/public/rw/reseq-info/faang_website
-    ;;
-  ('ves-hx-79.ebi.ac.uk')
-    MOJO_CONF=$ES_HOME/config/elasticsearchproxy.faang.conf
-    PROJECT_HOME=/nfs/public/rw/reseq-info/faang_website_staging
-    ;;
-  ('ves-hx-e6.ebi.ac.uk')
+  ('wp-np2-1a.ebi.ac.uk')
     MOJO_CONF=$ES_HOME/config/elasticsearchproxy.igsr.conf
     PROJECT_HOME=/nfs/public/rw/reseq-info/igsr_website_staging
     ;;
   ('ves-pg-e6.ebi.ac.uk')
     MOJO_CONF=$ES_HOME/config/elasticsearchproxy.igsr.conf
     PROJECT_HOME=/nfs/public/rw/reseq-info/igsr_website
-    ;;
-  ('ves-oy-e6.ebi.ac.uk')
-    MOJO_CONF=$ES_HOME/config/elasticsearchproxy.igsr.conf
-    PROJECT_HOME=/nfs/public/rw/reseq-info/igsr_website
-    ;;
-  ('ves-hx-e5.ebi.ac.uk')
-    MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf
-    PROJECT_HOME=/nfs/public/rw/reseq-info/hipsci_portal_staging
-    ;;
-  ('ves-pg-e5.ebi.ac.uk')
-    MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf
-    PROJECT_HOME=/nfs/public/rw/reseq-info/hipsci_portal
-    ;;
-  ('ves-oy-e5.ebi.ac.uk')
-    MOJO_CONF=$ES_HOME/config/elasticsearchproxy.hipsci.conf
-    PROJECT_HOME=/nfs/public/rw/reseq-info/hipsci_portal
     ;;
 esac
 export MOJO_CONF
